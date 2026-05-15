@@ -21,6 +21,7 @@ import * as ioReducers from './io';
 import * as playReducers from './play';
 import * as selectionReducers from './selection';
 import * as transcriptCorrectionReducers from './transcript_correction';
+import { toggleDisplayRetakes } from './retakes';
 import { removeAllSilences } from './silence_removal';
 import { memoizedLintDocumentContent } from '../../util/document_linter';
 
@@ -36,6 +37,7 @@ export const reducers: (
   ...Object.values(playReducers),
   ...Object.values(selectionReducers),
   ...Object.values(transcriptCorrectionReducers),
+  toggleDisplayRetakes,
   removeAllSilences,
 ];
 

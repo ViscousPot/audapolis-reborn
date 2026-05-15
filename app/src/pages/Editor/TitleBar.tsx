@@ -9,6 +9,7 @@ import {
   FloppyDiskIcon,
   IconButton,
   IconButtonProps,
+  HighlightIcon,
   Pane,
   PersonIcon,
   RedoIcon,
@@ -29,6 +30,7 @@ import {
   toggleDisplaySpeakerNames,
   toggleDisplayVideo,
 } from '../../state/editor/display';
+import { toggleDisplayRetakes } from '../../state/editor/retakes';
 import { closeDocument, saveDocument } from '../../state/editor/io';
 import { removeAllSilences } from '../../state/editor/silence_removal';
 import { setPlay } from '../../state/editor/play';
@@ -71,6 +73,8 @@ export function EditorTitleBar(): JSX.Element {
   const displayVideo =
     useSelector((state: RootState) => state.editor.present?.document.metadata.display_video) ||
     false;
+  const displayRetakes =
+    useSelector((state: RootState) => state.editor.present?.displayRetakes) || false;
   const canUndo = useSelector((state: RootState) => state.editor.past.length > 0);
   const canRedo = useSelector((state: RootState) => state.editor.future.length > 0);
   const canSave = useSelector(
@@ -125,6 +129,13 @@ export function EditorTitleBar(): JSX.Element {
               icon={FilmIcon}
               isActive={displayVideo}
               onClick={() => dispatch(toggleDisplayVideo())}
+            />
+          </Tooltip>
+          <Tooltip content={displayRetakes ? 'hide retake highlights' : 'highlight retakes'}>
+            <TitleBarButton
+              icon={HighlightIcon}
+              isActive={displayRetakes}
+              onClick={() => dispatch(toggleDisplayRetakes())}
             />
           </Tooltip>
         </TitleBarGroup>

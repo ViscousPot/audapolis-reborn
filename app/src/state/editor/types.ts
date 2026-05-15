@@ -50,6 +50,8 @@ export interface EditorState {
   filterPopup: boolean;
 
   transcriptCorrectionState: string | null;
+
+  displayRetakes: boolean;
 }
 
 export type ExportPopupState = 'hidden' | 'document' | 'selection';
@@ -82,4 +84,6 @@ export const defaultEditorState: EditorState = {
   filterPopup: false,
 
   transcriptCorrectionState: null,
+
+  displayRetakes: true,
 };

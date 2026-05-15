@@ -9,6 +9,7 @@ import {
 } from '../../core/document';
 import { majorScale, Pane, PaneProps, Text } from 'evergreen-ui';
 import { reassignParagraph, renameSpeaker } from '../../state/editor/edit';
+import { memoizedRetakeHighlights } from '../../state/editor/retakes';
 import { VISIBLE_SILENCE_THRESHOLD } from '../../state/editor/silence_removal';
 import { RootState } from '../../state';
 import { useTheme } from '../../components/theme';
@@ -42,6 +43,16 @@ export function Paragraph({
   const displayConfidence = useSelector(
     (state: RootState) => state.editor.present?.displayConfidence || false
   );
+  const displayRetakes = useSelector(
+    (state: RootState) => state.editor.present?.displayRetakes || false
+  );
+  const documentContent = useSelector(
+    (state: RootState) => state.editor.present?.document.content
+  );
+  const retakeHighlights = React.useMemo(() => {
+    if (!displayRetakes || !documentContent) return null;
+    return memoizedRetakeHighlights(documentContent);
+  }, [displayRetakes, documentContent]);
 
   return (
     <Pane display={'flex'} flexDirection={'row'} marginBottom={majorScale(2)}>
@@ -71,7 +82,30 @@ export function Paragraph({
             return; // we are handling the rendering in the first element
           } else {
             const preserve = i == 0 || i == data.content.length - 1;
-            return renderParagraphItem(item, displayConfidence, commonProps, preserve);
+            // Resolve retake highlight for this item. Bridge across silences:
+            // if a silence sits between two same-kind highlighted text items,
+            // colour it too so the bar is visually continuous.
+            let retakeKind: 'discard' | 'keep' | undefined;
+            if (retakeHighlights) {
+              if (item.type === 'text') {
+                retakeKind = retakeHighlights[item.uuid];
+              } else if (item.type === 'non_text' || item.type === 'artificial_silence') {
+                const prev = data.content[i - 1];
+                const next = data.content[i + 1];
+                if (prev && next && prev.type === 'text' && next.type === 'text') {
+                  const pK = retakeHighlights[prev.uuid];
+                  const nK = retakeHighlights[next.uuid];
+                  if (pK && pK === nK) retakeKind = pK;
+                }
+              }
+            }
+            return renderParagraphItem(
+              item,
+              displayConfidence,
+              commonProps,
+              preserve,
+              retakeKind
+            );
           }
         })}
         <ParagraphSign
@@ -89,29 +123,38 @@ function renderParagraphItem(
   item: V3TimedParagraphItem,
   displayConfidence: boolean,
   commonProps: HTMLProps<HTMLSpanElement>,
-  preserve: boolean
+  preserve: boolean,
+  retakeKind?: 'discard' | 'keep'
 ): JSX.Element {
   if (item.type == 'text') {
-    if (displayConfidence) {
+    let bgColor: string | undefined;
+    if (retakeKind === 'discard') bgColor = 'rgba(232, 80, 70, 0.42)';
+    else if (retakeKind === 'keep') bgColor = 'rgba(70, 195, 110, 0.40)';
+    else if (displayConfidence) bgColor = `rgba(255, 0, 0, ${1 - item.conf})`;
+
+    // Highlight (incl. leading space) on the outer span so adjacent same-kind
+    // words render as one continuous bar instead of separate pills.
+    if (bgColor !== undefined) {
       return (
-        <span {...commonProps}>
-          {' '}
-          <span
-            style={{
-              backgroundColor: `rgba(255, 0, 0, ${1 - item.conf})`,
-            }}
-          >
-            {item.text}
-          </span>
+        <span {...commonProps} style={{ backgroundColor: bgColor }}>
+          {' ' + item.text}
         </span>
       );
-    } else {
-      return <span {...commonProps}>{' ' + item.text}</span>;
     }
+    return <span {...commonProps}>{' ' + item.text}</span>;
   } else if (item.type == 'non_text' || item.type == 'artificial_silence') {
+    let bgColor: string | undefined;
+    if (retakeKind === 'discard') bgColor = 'rgba(232, 80, 70, 0.42)';
+    else if (retakeKind === 'keep') bgColor = 'rgba(70, 195, 110, 0.40)';
     if (item.length > VISIBLE_SILENCE_THRESHOLD) {
       return (
-        <span style={{ fontFamily: 'quarter_rest' }} {...commonProps}>
+        <span
+          style={{
+            fontFamily: 'quarter_rest',
+            ...(bgColor !== undefined && { backgroundColor: bgColor }),
+          }}
+          {...commonProps}
+        >
           {' _'}
         </span>
       );
@@ -120,6 +163,7 @@ function renderParagraphItem(
         <span
           style={{
             ...(preserve && { whiteSpace: 'pre' }),
+            ...(bgColor !== undefined && { backgroundColor: bgColor }),
           }}
           {...commonProps}
         >

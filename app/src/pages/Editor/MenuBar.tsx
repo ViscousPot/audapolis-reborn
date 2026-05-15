@@ -11,6 +11,7 @@ import {
   toggleDisplaySpeakerNames,
   toggleDisplayVideo,
 } from '../../state/editor/display';
+import { toggleDisplayRetakes } from '../../state/editor/retakes';
 import React from 'react';
 import { MenuBar, MenuCheckbox, MenuGroup, MenuItem, MenuSeparator } from '../../components/Menu';
 
@@ -24,6 +25,9 @@ export function EditorMenuBar(): JSX.Element {
   );
   const displayConfidence = useSelector(
     (state: RootState) => state.editor.present?.displayConfidence || false
+  );
+  const displayRetakes = useSelector(
+    (state: RootState) => state.editor.present?.displayRetakes || false
   );
 
   return (
@@ -121,6 +125,11 @@ export function EditorMenuBar(): JSX.Element {
           label={'Highlight low confidence transcript'}
           checked={displayConfidence}
           callback={() => dispatch(toggleDisplayConfidence())}
+        />
+        <MenuCheckbox
+          label={'Highlight retakes'}
+          checked={displayRetakes}
+          callback={() => dispatch(toggleDisplayRetakes())}
         />
       </MenuGroup>
     </MenuBar>
