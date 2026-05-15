@@ -25,6 +25,7 @@ from .models import (
     ModelTypeNotSupported,
     models,
 )
+from .config import get_hf_token, HF_TOKEN_PATH
 from .otio import Segment, convert_otio
 from .tasks import TaskNotFoundError, tasks
 from .transcribe import TranscriptionState, TranscriptionTask, process_audio
@@ -108,6 +109,47 @@ async def get_task(task_uuid: str, auth: str = Depends(token_auth)):
 @app.delete("/tasks/{task_uuid}/")
 async def remove_task(task_uuid: str, auth: str = Depends(token_auth)):
     return tasks.delete(task_uuid)
+
+
+@app.post("/tasks/{task_uuid}/continue-without-diarization/")
+async def continue_without_diarization(task_uuid: str, auth: str = Depends(token_auth)):
+    task = tasks.get(task_uuid)
+    if not isinstance(task, TranscriptionTask):
+        raise HTTPException(status_code=400, detail="Not a transcription task")
+    if task.state != TranscriptionState.DIARIZATION_FAILED:
+        raise HTTPException(status_code=400, detail="Task is not awaiting diarization decision")
+    task.resolve_diarization(continue_without=True)
+    return task
+
+
+@app.post("/tasks/{task_uuid}/cancel-diarization-failure/")
+async def cancel_diarization_failure(task_uuid: str, auth: str = Depends(token_auth)):
+    task = tasks.get(task_uuid)
+    if not isinstance(task, TranscriptionTask):
+        raise HTTPException(status_code=400, detail="Not a transcription task")
+    if task.state != TranscriptionState.DIARIZATION_FAILED:
+        raise HTTPException(status_code=400, detail="Task is not awaiting diarization decision")
+    task.resolve_diarization(continue_without=False)
+    tasks.delete(task_uuid)
+    return PlainTextResponse("", status_code=200)
+
+
+@app.get("/config")
+async def get_config(auth: str = Depends(token_auth)):
+    return {"hf_token_set": get_hf_token() is not None}
+
+
+@app.post("/config/hf-token")
+async def set_hf_token(token: str = Form(...), auth: str = Depends(token_auth)):
+    HF_TOKEN_PATH.write_text(token.strip())
+    return {"hf_token_set": True}
+
+
+@app.delete("/config/hf-token")
+async def delete_hf_token(auth: str = Depends(token_auth)):
+    if HF_TOKEN_PATH.exists():
+        HF_TOKEN_PATH.unlink()
+    return {"hf_token_set": False}
 
 
 @app.get("/models/available")

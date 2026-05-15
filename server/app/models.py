@@ -16,6 +16,37 @@ from .config import CACHE_DIR, DATA_DIR
 from .tasks import Task, tasks
 
 
+_LANG_NAME_TO_ISO = {
+    "english": "en",
+    "indian english": "en",
+    "german": "de",
+    "french": "fr",
+    "spanish": "es",
+    "italian": "it",
+    "portuguese": "pt",
+    "russian": "ru",
+    "dutch": "nl",
+    "polish": "pl",
+    "swedish": "sv",
+    "japanese": "ja",
+    "chinese": "zh",
+    "chinese other": "zh",
+    "korean": "ko",
+    "ukrainian": "uk",
+    "turkish": "tr",
+    "arabic": "ar",
+}
+
+
+def _lang_name_to_iso(lang_name: str):
+    if not lang_name:
+        return None
+    key = lang_name.strip().lower()
+    if key == "multilingual":
+        return None
+    return _LANG_NAME_TO_ISO.get(key)
+
+
 class LanguageDoesNotExist(Exception):
     pass
 
@@ -41,12 +72,18 @@ class ModelDescription:
     type: str
     lang: str
     compressed: bool = field(default=False)
+    backend: str = field(default="vosk")
     model_id: str = field(default=None)
 
     def __post_init__(self):
         self.model_id = f"{self.type}-{self.lang}-{self.name}"
 
+    def whisper_name(self) -> str:
+        return self.url.split("://", 1)[1]
+
     def path(self) -> Path:
+        if self.backend == "whisper":
+            return DATA_DIR / f"whisper-{self.whisper_name()}.marker"
         url = urlparse(self.url)
         return DATA_DIR / (Path(url.path).name + ".model")
 
@@ -71,10 +108,18 @@ class ModelDefaultDict(defaultdict):
 
 class Models:
     def __init__(self):
-        with open(Path(__file__).parent / "models.yml", "r") as f:
-            models_raw = yaml.safe_load(f)
-            languages = ModelDefaultDict()
-            models = {}
+        languages = ModelDefaultDict()
+        models = {}
+
+        model_files = [
+            Path(__file__).parent / "whisper_models.yml",
+            Path(__file__).parent / "models.yml",
+        ]
+        for model_file in model_files:
+            if not model_file.exists():
+                continue
+            with open(model_file, "r") as f:
+                models_raw = yaml.safe_load(f) or {}
             for lang, lang_models in list(models_raw.items()):
                 for model in lang_models:
                     model_description = ModelDescription(lang=lang, **model)
@@ -84,9 +129,6 @@ class Models:
         self.available = dict(languages)
         self.model_descriptions = models
 
-        # TODO: does it make sense to cache the models in memory
-        #  if we have more than one? also maybe add some time based
-        #  heuristics if it is smart to still keep the model in ram
         self.loaded = {}
 
     @property
@@ -105,10 +147,14 @@ class Models:
         return self.model_descriptions[model_id]
 
     def _load_model(self, model):
-        if model.type == "transcription":
-            return Model(str(model.path()))
-        else:
+        if model.type != "transcription":
             raise ModelTypeNotSupported()
+        if model.backend == "whisper":
+            from .whisper_backend import WhisperWrapper
+
+            lang = _lang_name_to_iso(model.lang)
+            return WhisperWrapper(model.whisper_name(), language=lang)
+        return Model(str(model.path()))
 
     def get(self, model_id: str) -> Union[Model]:
         model = self.get_model_description(model_id)
@@ -122,6 +168,25 @@ class Models:
     def download(self, model_id: str, task_uuid: str):
         task: DownloadModelTask = tasks.get(task_uuid)
         model = self.get_model_description(model_id)
+
+        if model.backend == "whisper":
+            task.state = DownloadModelState.DOWNLOADING
+            task.total = 1
+            from .whisper_backend import WhisperWrapper
+
+            lang = _lang_name_to_iso(model.lang)
+            wrapper = WhisperWrapper(model.whisper_name(), language=lang)
+            wrapper.asr()
+            try:
+                wrapper.align(lang or "en")
+            except Exception:
+                pass
+            task.add_progress(1)
+            model.path().parent.mkdir(parents=True, exist_ok=True)
+            model.path().write_text(f"whisper={model.whisper_name()}\n")
+            task.state = DownloadModelState.DONE
+            return
+
         with tempfile.TemporaryFile(dir=CACHE_DIR) as f:
             response = requests.get(model.url, stream=True)
             task.total = int(response.headers.get("content-length"))

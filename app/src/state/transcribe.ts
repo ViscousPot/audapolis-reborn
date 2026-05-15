@@ -17,6 +17,8 @@ import { getServer } from './server';
 import { createHash } from 'crypto';
 import { copyToMp4, convertToWav } from '../core/ffmpeg';
 import {
+  cancelDiarizationFailure,
+  continueWithoutDiarization,
   deleteTask,
   getTask,
   startTranscription as startTranscriptionApiCall,
@@ -131,13 +133,28 @@ export const startTranscription = createAsyncThunk<
 
     dispatch(setState(task.state));
 
+    let usedDiarize = diarize;
     while (true) {
-      const { content, state, progress } = await getTask(server, task);
+      const taskResult = await getTask(server, task);
+      const { content, state, progress } = taskResult;
 
       dispatch(setProgress(progress));
       dispatch(setState(state));
 
-      if (state == 'done') {
+      if (state == TranscriptionState.DIARIZATION_FAILED) {
+        const error = (taskResult as TranscriptionTask).diarization_error || 'Unknown error';
+        const shouldContinue = confirm(
+          `Speaker separation failed: ${error}\n\nContinue without it?`
+        );
+        if (shouldContinue) {
+          usedDiarize = false;
+          await continueWithoutDiarization(server, task.uuid);
+        } else {
+          await cancelDiarizationFailure(server, task.uuid);
+          dispatch(openLanding());
+          return;
+        }
+      } else if (state == 'done') {
         const fileContent = readFileSync(path);
         const fileContents = fileContent.buffer;
 
@@ -175,10 +192,9 @@ export const startTranscription = createAsyncThunk<
           openDocumentFromMemory({
             sources: sources,
             content: flatContent,
-            metadata: { display_speaker_names: diarize, display_video: false },
+            metadata: { display_speaker_names: usedDiarize, display_video: false },
           })
         );
-        // Once the task is finished, try to delete it but ignore any errors
         await deleteTask(server, task.uuid);
         break;
       }

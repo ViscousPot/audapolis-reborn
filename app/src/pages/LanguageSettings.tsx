@@ -12,6 +12,7 @@ import {
   setDefaultModel,
 } from '../state/models';
 import {
+  Badge,
   Button,
   CloudDownloadIcon,
   Heading,
@@ -148,8 +149,11 @@ function ModelTable({
       <Table.Head padding={0}>
         <Table.TextHeaderCell>⭐</Table.TextHeaderCell>
         <Table.TextHeaderCell {...nameColumnsProps}>Name</Table.TextHeaderCell>
+        <Table.TextHeaderCell flexBasis={80} flexGrow={0}>
+          Type
+        </Table.TextHeaderCell>
         <Table.TextHeaderCell>Size</Table.TextHeaderCell>
-        <Table.TextHeaderCell flexBasis={'55%'}>Description</Table.TextHeaderCell>
+        <Table.TextHeaderCell flexBasis={'50%'}>Description</Table.TextHeaderCell>
         <Table.TextHeaderCell {...lastColumnProps} />
       </Table.Head>
 
@@ -206,8 +210,13 @@ function ModelTableRow({
         )}
       </Table.Cell>
       <Table.TextCell {...nameColumnsProps}>{row_model.name}</Table.TextCell>
+      <Table.Cell flexBasis={80} flexGrow={0}>
+        <Badge color={row_model.backend === 'whisper' ? 'blue' : 'neutral'}>
+          {row_model.backend}
+        </Badge>
+      </Table.Cell>
       <Table.TextCell isNumber>{row_model.size}</Table.TextCell>
-      <Table.TextCell flexBasis={'55%'}>{row_model.description}</Table.TextCell>
+      <Table.TextCell flexBasis={'50%'}>{row_model.description}</Table.TextCell>
       <Table.Cell {...lastColumnProps}>{action}</Table.Cell>
     </Table.Row>
   );
@@ -260,7 +269,9 @@ export function LanguageSettingsPage(): JSX.Element {
 
       <TitleBar />
       <MainMaxWidthContainer>
-        <BackButton id={'back' /* for tour */} />
+        <BackButton id={'back' /* for tour */} onClick={() => dispatch(openModelManager())}>
+          back
+        </BackButton>
 
         <Heading marginTop={majorScale(3)} marginBottom={majorScale(2)} paddingLeft={majorScale(1)}>
           Transcription Models for {language.lang}
@@ -272,7 +283,9 @@ export function LanguageSettingsPage(): JSX.Element {
           id={'transcription_table'}
         />
 
-        <BackButton marginY={majorScale(2)} />
+        <BackButton marginY={majorScale(2)} onClick={() => dispatch(openModelManager())}>
+          back
+        </BackButton>
       </MainMaxWidthContainer>
     </AppContainer>
   );

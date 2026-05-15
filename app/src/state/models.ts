@@ -5,6 +5,9 @@ import { getServer } from './server';
 import {
   getAvailableModels,
   getDownloadedModels,
+  getConfig,
+  setHfToken as setHfTokenApiCall,
+  deleteHfToken as deleteHfTokenApiCall,
   downloadModel as downloadModelApiCall,
   deleteModel as deleteModelApiCall,
   getTask,
@@ -20,6 +23,7 @@ export interface Model {
   size: string;
   type: 'transcription';
   model_id: string;
+  backend: 'vosk' | 'whisper';
 }
 
 export interface Language {
@@ -39,25 +43,54 @@ export interface ModelsState {
   all: Model[];
   languages: Record<string, Language>;
   selectedLanguage: string | null;
+  hfTokenSet: boolean;
 }
 
 export const fetchModelState = createAsyncThunk<
-  { downloaded: Record<string, Model>; all: Model[] },
+  { downloaded: Record<string, Model>; all: Model[]; hfTokenSet: boolean },
   void,
   { state: RootState }
 >('models/fetchModelState', async (_, { getState }) => {
   const server = getServer(getState());
   assertSome(server);
-  const all = await getAvailableModels(server);
-  const downloaded = await getDownloadedModels(server);
+  const [all, downloaded, config] = await Promise.all([
+    getAvailableModels(server),
+    getDownloadedModels(server),
+    getConfig(server),
+  ]);
 
   const flattenLanguages = (x: Record<string, Language>) =>
     Object.values(x).flatMap((x) => {
       return x.transcription_models;
     });
 
-  return { all: flattenLanguages(all), downloaded: downloaded, languages: all };
+  return {
+    all: flattenLanguages(all),
+    downloaded: downloaded,
+    languages: all,
+    hfTokenSet: config.hf_token_set,
+  };
 });
+
+export const setHfToken = createAsyncThunk<void, string, { state: RootState }>(
+  'models/setHfToken',
+  async (token, { dispatch, getState }) => {
+    const server = getServer(getState());
+    assertSome(server);
+    await setHfTokenApiCall(server, token);
+    dispatch(fetchModelState());
+  }
+);
+
+export const removeHfToken = createAsyncThunk<void, void, { state: RootState }>(
+  'models/removeHfToken',
+  async (_, { dispatch, getState }) => {
+    const server = getServer(getState());
+    assertSome(server);
+    await deleteHfTokenApiCall(server);
+    dispatch(fetchModelState());
+  }
+);
 
 export const downloadModel = createAsyncThunk<void, Model, { state: RootState }>(
   'models/downloadModel',
@@ -115,6 +148,7 @@ export const modelsSlice = createSlice({
     all: [],
     languages: {},
     selectedLanguage: null,
+    hfTokenSet: false,
   } as ModelsState,
   reducers: {
     setProgress: (

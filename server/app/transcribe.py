@@ -1,5 +1,6 @@
 import enum
 import json
+import threading
 import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +16,7 @@ from vosk import KaldiRecognizer, Model
 
 from .models import models
 from .tasks import Task, tasks
+from .whisper_backend import DiarizationFailed, WhisperWrapper, transcribe_with_whisper
 
 SAMPLE_RATE = 16000
 # Number of seconds that should be fed into vosk.
@@ -28,6 +30,7 @@ class TranscriptionState(str, enum.Enum):
     LOADING = "loading"
     DIARIZING = "diarizing"
     TRANSCRIBING = "transcribing"
+    DIARIZATION_FAILED = "diarization_failed"
     DONE = "done"
 
 
@@ -39,10 +42,23 @@ class TranscriptionTask(Task):
     processed: float = 0
     content: Optional[dict] = None
     progress: float = 0
+    diarization_error: Optional[str] = None
+
+    def __post_init__(self):
+        self._continue_event = threading.Event()
+        self._continue_without_diarization = False
 
     def set_transcription_progress(self, processed):
         self.processed += processed
         self.progress = self.processed / self.total
+
+    def wait_for_diarization_decision(self) -> bool:
+        self._continue_event.wait()
+        return self._continue_without_diarization
+
+    def resolve_diarization(self, continue_without: bool):
+        self._continue_without_diarization = continue_without
+        self._continue_event.set()
 
 
 def transcribe_raw_data(model: Model, name, audio, offset, duration, process_callback):
@@ -89,6 +105,9 @@ def process_audio(
         diarize_max_speakers,
     )
 
+    if content is None:
+        return
+
     task.content = content
     task.state = TranscriptionState.DONE
 
@@ -118,6 +137,26 @@ def transcribe(
     # TODO: can we make this atomic?
     task.total = audio.duration_seconds
     task.processed = 0
+
+    if isinstance(model, WhisperWrapper):
+        task.state = TranscriptionState.TRANSCRIBING
+        try:
+            return transcribe_with_whisper(
+                wrapper=model,
+                audio=audio,
+                fileName=fileName,
+                diarize=diarize,
+                diarize_max_speakers=diarize_max_speakers,
+                set_progress=task.set_transcription_progress,
+            )
+        except DiarizationFailed as e:
+            traceback.print_exc()
+            task.content = e.paragraphs
+            task.diarization_error = str(e)
+            task.state = TranscriptionState.DIARIZATION_FAILED
+            if task.wait_for_diarization_decision():
+                return e.paragraphs
+            return None
 
     if not diarize:
         task.state = TranscriptionState.TRANSCRIBING

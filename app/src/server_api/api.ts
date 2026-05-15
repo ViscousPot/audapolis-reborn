@@ -12,6 +12,7 @@ export enum TranscriptionState {
   LOADING = 'loading',
   TRANSCRIBING = 'transcribing',
   POST_PROCESSING = 'post_processing',
+  DIARIZATION_FAILED = 'diarization_failed',
   DONE = 'done',
   CONVERTING = 'converting',
 }
@@ -20,6 +21,7 @@ export interface TranscriptionTask extends Task {
   progress: number;
   state: TranscriptionState;
   content?: V1Paragraph<Omit<V1V2Silence | V1V2Word, 'source'>>[];
+  diarization_error?: string;
 }
 
 export enum DownloadingModelState {
@@ -69,8 +71,38 @@ export function deleteTask(server: ServerConfig, uuid: string): Promise<void> {
   return fetchFromServer(server, 'DELETE', `tasks/${uuid}`).then(() => {});
 }
 
+export function continueWithoutDiarization(server: ServerConfig, uuid: string): Promise<void> {
+  return fetchFromServer(server, 'POST', `tasks/${uuid}/continue-without-diarization`).then(
+    () => {}
+  );
+}
+
+export function cancelDiarizationFailure(server: ServerConfig, uuid: string): Promise<void> {
+  return fetchFromServer(server, 'POST', `tasks/${uuid}/cancel-diarization-failure`).then(
+    () => {}
+  );
+}
+
 export function deleteModel(server: ServerConfig, model_id: string): Promise<void> {
   return fetchFromServer(server, 'POST', 'models/delete', { model_id }).then(() => {});
+}
+
+export interface AppConfig {
+  hf_token_set: boolean;
+}
+
+export function getConfig(server: ServerConfig): Promise<AppConfig> {
+  return fetchFromServer(server, 'GET', 'config').then((x) => x.json());
+}
+
+export function setHfToken(server: ServerConfig, token: string): Promise<AppConfig> {
+  return fetchFromServer(server, 'POST', 'config/hf-token', undefined, {
+    form: { token },
+  }).then((x) => x.json());
+}
+
+export function deleteHfToken(server: ServerConfig): Promise<AppConfig> {
+  return fetchFromServer(server, 'DELETE', 'config/hf-token').then((x) => x.json());
 }
 
 export function getAvailableModels(server: ServerConfig): Promise<Record<string, Language>> {

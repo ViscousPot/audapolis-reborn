@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { TitleBar } from '../components/TitleBar';
 import { AppContainer, BackButton, MainMaxWidthContainer } from '../components/Util';
 import { RootState } from '../state';
-import { ChevronRightIcon, Heading, Icon, majorScale, Table, Tooltip } from 'evergreen-ui';
+import { Badge, ChevronRightIcon, Heading, Icon, majorScale, Pane, Table, Tooltip } from 'evergreen-ui';
 import { ModelManagerTour } from '../tour/ModelManagerTour';
 import { useTheme } from '../components/theme';
 import { openLanguageSettings } from '../state/nav';
@@ -40,6 +40,7 @@ export function ModelManagerPage(): JSX.Element {
         <Table id={'language_table'}>
           <Table.Head padding={0}>
             <Table.TextHeaderCell {...firstColumnProps}>Language</Table.TextHeaderCell>
+            <Table.TextHeaderCell>Type</Table.TextHeaderCell>
             <Table.TextHeaderCell>Transcription Models</Table.TextHeaderCell>
             <Table.TextHeaderCell {...lastColumnProps} />
           </Table.Head>
@@ -56,6 +57,20 @@ export function ModelManagerPage(): JSX.Element {
                 key={i}
               >
                 <Table.TextCell {...firstColumnProps}>{lang.lang}</Table.TextCell>
+                <Table.Cell>
+                  <Pane display="flex" gap={4}>
+                    {[...new Set(lang.transcription_models.map((m) => m.backend))].map(
+                      (backend) => (
+                        <Badge
+                          key={backend}
+                          color={backend === 'whisper' ? 'blue' : 'neutral'}
+                        >
+                          {backend}
+                        </Badge>
+                      )
+                    )}
+                  </Pane>
+                </Table.Cell>
                 <ModelNumberTextCell
                   models={lang.transcription_models}
                   lang={lang.lang}

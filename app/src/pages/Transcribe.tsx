@@ -7,6 +7,7 @@ import { AppContainer } from '../components/Util';
 import { RootState } from '../state';
 import { openLanding, openModelManager } from '../state/nav';
 import {
+  Alert,
   Button,
   Combobox,
   Dialog,
@@ -17,13 +18,14 @@ import {
   minorScale,
   Pane,
   Text,
+  TextInput,
   TextInputField,
   toaster,
 } from 'evergreen-ui';
 import * as path from 'path';
 import { TranscribeTour } from '../tour/TranscribeTour';
 import { useTheme } from '../components/theme';
-import { getDefaultModel, Model } from '../state/models';
+import { getDefaultModel, Model, setHfToken, removeHfToken } from '../state/models';
 
 function getDefaultModelInstance(models: Model[], lang: string, type: string) {
   const default_model_id = getDefaultModel(lang, type);
@@ -94,6 +96,11 @@ export function TranscribePage(): JSX.Element {
   const [diarizationMode, setDiarizationMode] = useState('on' as 'off' | 'on' | 'advanced');
   const [diarizationSpeakers, setDiarizationSpeakers] = useState('4');
   const [animationDone, setAnimationDone] = useState(false);
+  const [hfTokenInput, setHfTokenInput] = useState('');
+
+  const hfTokenSet = useSelector((state: RootState) => state.models.hfTokenSet);
+  const isWhisper = selectedTranscriptionModel?.backend === 'whisper';
+  const diarizeDisabled = isWhisper && !hfTokenSet;
 
   const theme = useTheme();
 
@@ -125,12 +132,13 @@ export function TranscribePage(): JSX.Element {
                   (diarizationMode == 'advanced' && isFinite(parsedSpeakers)) ||
                   diarizationMode != 'advanced'
                 ) {
+                  const diarize = !diarizeDisabled && diarizationMode != 'off';
                   dispatch(
                     startTranscription({
                       transcription_model: selectedTranscriptionModel,
-                      diarize: diarizationMode != 'off',
+                      diarize,
                       diarize_max_speakers:
-                        diarizationMode == 'advanced' ? parsedSpeakers - 1 : null,
+                        diarize && diarizationMode == 'advanced' ? parsedSpeakers - 1 : null,
                     })
                   );
                 } else {
@@ -198,28 +206,86 @@ export function TranscribePage(): JSX.Element {
           <Group width={'100%'}>
             <Button
               flex={1}
-              isActive={diarizationMode == 'off'}
+              isActive={diarizeDisabled || diarizationMode == 'off'}
+              disabled={diarizeDisabled}
               onClick={() => setDiarizationMode('off')}
             >
               Off
             </Button>
             <Button
               flex={1}
-              isActive={diarizationMode == 'on'}
+              isActive={!diarizeDisabled && diarizationMode == 'on'}
+              disabled={diarizeDisabled}
               onClick={() => setDiarizationMode('on')}
             >
               On
             </Button>
             <Button
               flex={1}
-              isActive={diarizationMode == 'advanced'}
+              isActive={!diarizeDisabled && diarizationMode == 'advanced'}
+              disabled={diarizeDisabled}
               onClick={() => setDiarizationMode('advanced')}
             >
               Advanced
             </Button>
           </Group>
         </FormField>
-        {diarizationMode == 'advanced' ? (
+        {diarizeDisabled ? (
+          <Alert intent="none" marginBottom={majorScale(2)} title="HuggingFace token required">
+            <Text size={300} display="block" marginBottom={majorScale(1)}>
+              Whisper speaker separation needs a{' '}
+              <Link href="https://huggingface.co/settings/tokens" target="_blank">
+                HuggingFace token
+              </Link>{' '}
+              (read-only is fine). You also need to accept the{' '}
+              <Link
+                href="https://huggingface.co/pyannote/speaker-diarization-3.1"
+                target="_blank"
+              >
+                pyannote license
+              </Link>
+              .
+            </Text>
+            <Pane display="flex" gap={majorScale(1)}>
+              <TextInput
+                flex={1}
+                placeholder="hf_..."
+                value={hfTokenInput}
+                type="password"
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setHfTokenInput(e.target.value)}
+              />
+              <Button
+                appearance="primary"
+                disabled={!hfTokenInput.trim()}
+                onClick={() => {
+                  dispatch(setHfToken(hfTokenInput.trim()));
+                  setHfTokenInput('');
+                }}
+              >
+                Save
+              </Button>
+            </Pane>
+          </Alert>
+        ) : isWhisper && hfTokenSet ? (
+          <Pane marginBottom={majorScale(1)}>
+            <Text size={300} color="muted">
+              HuggingFace token set.{' '}
+              <Link
+                cursor="pointer"
+                onClick={() => {
+                  if (confirm('Remove the saved HuggingFace token?')) {
+                    dispatch(removeHfToken());
+                  }
+                }}
+              >
+                Remove
+              </Link>
+            </Text>
+          </Pane>
+        ) : (
+          <></>
+        )}
+        {!diarizeDisabled && diarizationMode == 'advanced' ? (
           <>
             <TextInputField
               label={'Maximum Number Of Speakers'}

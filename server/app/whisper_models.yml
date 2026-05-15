@@ -1,0 +1,69 @@
+English:
+- name: tiny.en
+  url: whisper://tiny.en
+  description: Fastest English-only model. Good for quick drafts.
+  size: 75M
+  type: transcription
+  backend: whisper
+- name: base.en
+  url: whisper://base.en
+  description: Fast English-only model with better accuracy than tiny.
+  size: 145M
+  type: transcription
+  backend: whisper
+- name: small.en
+  url: whisper://small.en
+  description: Balanced English-only model. Good accuracy for most use cases.
+  size: 475M
+  type: transcription
+  backend: whisper
+- name: medium.en
+  url: whisper://medium.en
+  description: High accuracy English-only model.
+  size: 1.5G
+  type: transcription
+  backend: whisper
+
+Multilingual:
+- name: tiny
+  url: whisper://tiny
+  description: Fastest multilingual model. Supports 99+ languages.
+  size: 75M
+  type: transcription
+  backend: whisper
+- name: base
+  url: whisper://base
+  description: Fast multilingual model with better accuracy than tiny.
+  size: 145M
+  type: transcription
+  backend: whisper
+- name: small
+  url: whisper://small
+  description: Balanced multilingual model. Good accuracy for most use cases.
+  size: 475M
+  type: transcription
+  backend: whisper
+- name: medium
+  url: whisper://medium
+  description: High accuracy multilingual model.
+  size: 1.5G
+  type: transcription
+  backend: whisper
+- name: large-v2
+  url: whisper://large-v2
+  description: Previous generation large model. High accuracy across all languages.
+  size: 3.1G
+  type: transcription
+  backend: whisper
+- name: large-v3
+  url: whisper://large-v3
+  description: Best accuracy across all languages.
+  size: 3.1G
+  type: transcription
+  backend: whisper
+- name: large-v3-turbo
+  url: whisper://large-v3-turbo
+  description: Distilled large-v3. Near large-v3 accuracy at much faster speed.
+  size: 1.6G
+  type: transcription
+  backend: whisper

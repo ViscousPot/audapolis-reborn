@@ -51,19 +51,23 @@ export function MainMaxWidthContainer({
   );
 }
 
-export function BackButton(props: ButtonProps): JSX.Element {
+export function BackButton({
+  onClick,
+  children,
+  ...props
+}: ButtonProps & { onClick?: () => void }): JSX.Element {
   const dispatch = useDispatch();
 
   return (
     <Pane>
       <Button
-        onClick={() => dispatch(openLanding())}
+        onClick={onClick ?? (() => dispatch(openLanding()))}
         iconBefore={ArrowLeftIcon}
         marginY={majorScale(2)}
         appearance={'minimal'}
         {...props}
       >
-        back to home screen
+        {children ?? 'back to home screen'}
       </Button>
     </Pane>
   );
