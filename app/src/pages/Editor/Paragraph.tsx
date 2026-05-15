@@ -9,6 +9,7 @@ import {
 } from '../../core/document';
 import { majorScale, Pane, PaneProps, Text } from 'evergreen-ui';
 import { reassignParagraph, renameSpeaker } from '../../state/editor/edit';
+import { VISIBLE_SILENCE_THRESHOLD } from '../../state/editor/silence_removal';
 import { RootState } from '../../state';
 import { useTheme } from '../../components/theme';
 import { Selection } from '../../state/editor/types';
@@ -108,7 +109,7 @@ function renderParagraphItem(
       return <span {...commonProps}>{' ' + item.text}</span>;
     }
   } else if (item.type == 'non_text' || item.type == 'artificial_silence') {
-    if (item.length > 0.4) {
+    if (item.length > VISIBLE_SILENCE_THRESHOLD) {
       return (
         <span style={{ fontFamily: 'quarter_rest' }} {...commonProps}>
           {' _'}

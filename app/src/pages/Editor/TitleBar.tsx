@@ -20,6 +20,7 @@ import {
   majorScale,
   PaneProps,
   Button,
+  EraserIcon,
 } from 'evergreen-ui';
 import { ForwardedRef } from 'react';
 import {
@@ -28,6 +29,7 @@ import {
   toggleDisplayVideo,
 } from '../../state/editor/display';
 import { saveDocument } from '../../state/editor/io';
+import { removeAllSilences } from '../../state/editor/silence_removal';
 import { setPlay } from '../../state/editor/play';
 import { useTheme } from '../../components/theme';
 import { Circle } from 'rc-progress';
@@ -100,6 +102,12 @@ export function EditorTitleBar(): JSX.Element {
               icon={RedoIcon}
               disabled={!canRedo}
               onClick={() => dispatch(ActionCreators.redo())}
+            />
+          </Tooltip>
+          <Tooltip content={'remove long silences'}>
+            <TitleBarButton
+              icon={EraserIcon}
+              onClick={() => dispatch(removeAllSilences())}
             />
           </Tooltip>
         </TitleBarGroup>

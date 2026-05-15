@@ -21,6 +21,7 @@ import * as ioReducers from './io';
 import * as playReducers from './play';
 import * as selectionReducers from './selection';
 import * as transcriptCorrectionReducers from './transcript_correction';
+import { removeAllSilences } from './silence_removal';
 import { memoizedLintDocumentContent } from '../../util/document_linter';
 
 exposeReducersWindow(displayReducers, editReducers, ioReducers, playReducers, selectionReducers);
@@ -35,6 +36,7 @@ export const reducers: (
   ...Object.values(playReducers),
   ...Object.values(selectionReducers),
   ...Object.values(transcriptCorrectionReducers),
+  removeAllSilences,
 ];
 
 function editorReducer(state: EditorState | undefined, action: AnyAction): EditorState {
@@ -68,6 +70,7 @@ const stateSlice: Reducer<StateWithHistory<EditorState | null>> = undoable(edito
     paste.fulfilled.type,
     finishTranscriptCorrection.type,
     filterContent.type,
+    removeAllSilences.type,
   ]),
   ignoreInitialState: false,
   syncFilter: true,

@@ -27,6 +27,7 @@ import {
 } from '../../state/editor/selectors';
 import { Dispatch } from '@reduxjs/toolkit';
 import { startTranscriptCorrection } from '../../state/editor/transcript_correction';
+import { removeAllSilences } from '../../state/editor/silence_removal';
 import { MenuItem, MenuSeparator, showContextMenu } from '../../components/Menu';
 import { setExportPopup } from '../../state/editor/display';
 
@@ -118,6 +119,7 @@ export function Document(): JSX.Element {
             accelerator={'i'}
             callback={() => dispatch(startTranscriptCorrection('left'))}
           />
+          <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
           <MenuItem
             label={'Export Selection'}
             callback={() => dispatch(setExportPopup('selection'))}
@@ -146,6 +148,7 @@ export function Document(): JSX.Element {
     } else {
       showContextMenu(
         <>
+          <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
           <MenuItem
             label={'Select All'}
             accelerator={'CmdOrCtrl+A'}
