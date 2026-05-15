@@ -9,7 +9,8 @@ import { useDispatch } from 'react-redux';
 import { ExportDocumentDialog } from './ExportDocumentDialog';
 import { EditorTour } from '../../tour/EditorTour';
 import { togglePlaying } from '../../state/editor/play';
-import { insertParagraphEnd } from '../../state/editor/edit';
+import { copy, cut, insertParagraphEnd, paste } from '../../state/editor/edit';
+import { saveDocument } from '../../state/editor/io';
 import { EditorMenuBar } from './MenuBar';
 import { FilterDialog } from './Filter';
 
@@ -24,6 +25,26 @@ const MainContainer = styled(MainCenterColumn)`
 export function EditorPage(): JSX.Element {
   const dispatch = useDispatch();
   const handleKeyPress: KeyboardEventHandler = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      dispatch(saveDocument(e.shiftKey));
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+      e.preventDefault();
+      dispatch(cut());
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+      e.preventDefault();
+      dispatch(copy());
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+      e.preventDefault();
+      dispatch(paste());
+      return;
+    }
     if (e.key === ' ') {
       dispatch(togglePlaying());
       e.preventDefault();
