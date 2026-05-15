@@ -129,7 +129,8 @@ export const selectAll = createActionWithReducer<EditorState>('editor/selectAll'
 export const moveSelectionHeadTo = createActionWithReducer<EditorState, number>(
   'editor/moveSelectionHeadTo',
   (state, absoluteIndex) => {
-    const anchor = state.selection !== null ? getAnchor(state.selection) : currentIndex(state);
+    const anchor =
+      state.selection !== null ? getAnchor(state.selection) : state.cursor.userIndex;
     state.selection = setSelectionFromAnchorAndFocus(anchor, absoluteIndex);
     state.cursor.current = 'user';
     state.cursor.userIndex = absoluteIndex;
