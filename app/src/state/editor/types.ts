@@ -51,7 +51,13 @@ export interface EditorState {
 
   transcriptCorrectionState: string | null;
 
+  timingEditor: TimingEditorState | null;
+
   displayRetakes: boolean;
+}
+
+export interface TimingEditorState {
+  focusUuid: string;
 }
 
 export type ExportPopupState = 'hidden' | 'document' | 'selection';
@@ -84,6 +90,8 @@ export const defaultEditorState: EditorState = {
   filterPopup: false,
 
   transcriptCorrectionState: null,
+
+  timingEditor: null,
 
   displayRetakes: true,
 };

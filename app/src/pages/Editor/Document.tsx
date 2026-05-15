@@ -19,14 +19,17 @@ import { goLeft, goRight, setUserIndex } from '../../state/editor/play';
 import { copy, copySelectionText, deleteSomething, paste } from '../../state/editor/edit';
 import { Theme } from '../../components/theme';
 import {
+  currentIndexLeft,
   memoizedIndexToUuidMap,
   memoizedMacroItems,
   memoizedSpeakerIndices,
   memoizedTimedDocumentItems,
   memoizedUuidToIndexMap,
+  selectedItems,
 } from '../../state/editor/selectors';
 import { Dispatch } from '@reduxjs/toolkit';
 import { startTranscriptCorrection } from '../../state/editor/transcript_correction';
+import { openTimingEditor } from '../../state/editor/timing_editor';
 import { removeAllSilences } from '../../state/editor/silence_removal';
 import { MenuItem, MenuSeparator, showContextMenu } from '../../components/Menu';
 import { setExportPopup } from '../../state/editor/display';
@@ -112,6 +115,13 @@ export function Document(): JSX.Element {
 
     disableMouseMove.current = true;
     if (getState().editor.present?.selection) {
+      const firstWordUuid = (() => {
+        const editorState = getState().editor.present;
+        if (!editorState) return null;
+        const items = selectedItems(editorState);
+        const firstWord = items.find((x) => x.type === 'text');
+        return firstWord?.uuid ?? null;
+      })();
       showContextMenu(
         <>
           <MenuItem
@@ -119,6 +129,12 @@ export function Document(): JSX.Element {
             accelerator={'i'}
             callback={() => dispatch(startTranscriptCorrection('left'))}
           />
+          {firstWordUuid && (
+            <MenuItem
+              label={'Edit timing of word...'}
+              callback={() => dispatch(openTimingEditor(firstWordUuid))}
+            />
+          )}
           <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
           <MenuItem
             label={'Export Selection'}
@@ -146,8 +162,27 @@ export function Document(): JSX.Element {
         </>
       );
     } else {
+      const wordBeforeCursorUuid = (() => {
+        const editorState = getState().editor.present;
+        if (!editorState) return null;
+        const items = editorState.document.content;
+        const cursorIdxLeft = currentIndexLeft(editorState);
+        for (let i = cursorIdxLeft; i >= 0; i--) {
+          const it = items[i];
+          if (!it) continue;
+          if (it.type === 'paragraph_start') return null;
+          if (it.type === 'text') return it.uuid;
+        }
+        return null;
+      })();
       showContextMenu(
         <>
+          {wordBeforeCursorUuid && (
+            <MenuItem
+              label={'Edit timing of word before cursor...'}
+              callback={() => dispatch(openTimingEditor(wordBeforeCursorUuid))}
+            />
+          )}
           <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
           <MenuItem
             label={'Select All'}

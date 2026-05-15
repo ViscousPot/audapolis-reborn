@@ -13,6 +13,7 @@ import { copy, cut, insertParagraphEnd, paste } from '../../state/editor/edit';
 import { saveDocument } from '../../state/editor/io';
 import { EditorMenuBar } from './MenuBar';
 import { FilterDialog } from './Filter';
+import { TimingEditorDialog } from './TimingEditorDialog';
 
 const MainContainer = styled(MainCenterColumn)`
   justify-content: start;
@@ -62,6 +63,7 @@ export function EditorPage(): JSX.Element {
       <EditorTitleBar />
       <ExportDocumentDialog />
       <FilterDialog />
+      <TimingEditorDialog />
 
       <MainContainer id={'scroll-container'}>
         <Document />

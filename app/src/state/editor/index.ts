@@ -21,8 +21,18 @@ import * as ioReducers from './io';
 import * as playReducers from './play';
 import * as selectionReducers from './selection';
 import * as transcriptCorrectionReducers from './transcript_correction';
+import * as timingEditorReducers from './timing_editor';
 import { toggleDisplayRetakes } from './retakes';
 import { removeAllSilences } from './silence_removal';
+import {
+  insertWordAfter,
+  insertWordInGap,
+  insertWordIntoSilence,
+  removeWord,
+  setWordText,
+  setWordTiming,
+  splitWord,
+} from './timing_editor';
 import { memoizedLintDocumentContent } from '../../util/document_linter';
 
 exposeReducersWindow(displayReducers, editReducers, ioReducers, playReducers, selectionReducers);
@@ -37,6 +47,7 @@ export const reducers: (
   ...Object.values(playReducers),
   ...Object.values(selectionReducers),
   ...Object.values(transcriptCorrectionReducers),
+  ...Object.values(timingEditorReducers),
   toggleDisplayRetakes,
   removeAllSilences,
 ];
@@ -72,6 +83,13 @@ const stateSlice: Reducer<StateWithHistory<EditorState | null>> = undoable(edito
     paste.fulfilled.type,
     finishTranscriptCorrection.type,
     filterContent.type,
+    setWordText.type,
+    setWordTiming.type,
+    insertWordAfter.type,
+    insertWordInGap.type,
+    insertWordIntoSilence.type,
+    splitWord.type,
+    removeWord.type,
     removeAllSilences.type,
   ]),
   ignoreInitialState: false,
