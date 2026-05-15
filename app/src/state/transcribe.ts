@@ -32,33 +32,50 @@ export interface TranscribeState {
   state?: TranscriptionState;
 }
 
-export const transcribeFile = createAsyncThunk<string | undefined, void, { state: RootState }>(
-  'transcribe/transcribeFile',
-  async (_, { dispatch, getState }) => {
-    await dispatch(fetchModelState()).unwrap();
-    if (Object.keys(getState().models.downloaded).length == 0) {
-      await dispatch(openModelManager()).unwrap();
-      alert('Please download a transcription model first!');
-      return;
-    }
-    const file = await openFile({
-      title: 'Import media file...',
-      properties: ['openFile', 'promptToCreate', 'createDirectory'],
-      filters: [
-        {
-          name: 'Audio & Video Files',
-          extensions: ['mp3', 'wav', 'ogg', 'wma', 'aac', 'mp4', 'mkv', 'mov', 'webm'],
-        },
-        { name: 'All Files', extensions: ['*'] },
-      ],
-    });
-    if (file.canceled) {
-      return;
-    }
-    dispatch(openTranscribe());
-    return file.filePaths[0];
+export const SUPPORTED_IMPORT_EXTENSIONS = [
+  'mp3',
+  'wav',
+  'ogg',
+  'wma',
+  'aac',
+  'mp4',
+  'mkv',
+  'mov',
+  'webm',
+];
+
+export const transcribeFile = createAsyncThunk<
+  string | undefined,
+  string | undefined,
+  { state: RootState }
+>('transcribe/transcribeFile', async (path, { dispatch, getState }) => {
+  await dispatch(fetchModelState()).unwrap();
+  if (Object.keys(getState().models.downloaded).length == 0) {
+    await dispatch(openModelManager()).unwrap();
+    alert('Please download a transcription model first!');
+    return;
   }
-);
+  if (path) {
+    dispatch(openTranscribe());
+    return path;
+  }
+  const file = await openFile({
+    title: 'Import media file...',
+    properties: ['openFile', 'promptToCreate', 'createDirectory'],
+    filters: [
+      {
+        name: 'Audio & Video Files',
+        extensions: SUPPORTED_IMPORT_EXTENSIONS,
+      },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+  });
+  if (file.canceled) {
+    return;
+  }
+  dispatch(openTranscribe());
+  return file.filePaths[0];
+});
 
 function workingExtensions(extension: string): boolean {
   return ['.wav', '.mp4'].indexOf(extension) != -1;

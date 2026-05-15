@@ -78,23 +78,28 @@ export const setSources = createActionWithReducer<EditorState, Record<string, So
 
 export const openDocumentFromDisk = createAsyncActionWithReducer<
   EditorState,
-  void,
+  string | undefined,
   { document: Document; path: string }
 >(
   'editor/openDocumentFromDisk',
-  async (_, { dispatch }) => {
-    const file = await openFile({
-      title: 'Open audapolis document...',
-      properties: ['openFile', 'promptToCreate', 'createDirectory'],
-      filters: [
-        { name: 'Audapolis Project Files', extensions: ['audapolis'] },
-        { name: 'All Files', extensions: ['*'] },
-      ],
-    });
-    if (file.canceled) {
-      throw new NoFileSelectedError();
+  async (filePath, { dispatch }) => {
+    let path: string;
+    if (filePath) {
+      path = filePath;
+    } else {
+      const file = await openFile({
+        title: 'Open audapolis document...',
+        properties: ['openFile', 'promptToCreate', 'createDirectory'],
+        filters: [
+          { name: 'Audapolis Project Files', extensions: ['audapolis'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+      if (file.canceled) {
+        throw new NoFileSelectedError();
+      }
+      path = file.filePaths[0];
     }
-    const path = file.filePaths[0];
 
     dispatch(openEditor());
     try {

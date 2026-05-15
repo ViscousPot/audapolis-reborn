@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { transcribeFile } from '../state/transcribe';
+import {
+  SUPPORTED_IMPORT_EXTENSIONS,
+  transcribeFile,
+} from '../state/transcribe';
 import { TitleBar } from '../components/TitleBar';
 import { AppContainer, MainCenterColumn } from '../components/Util';
 import styled from 'styled-components';
@@ -22,6 +25,7 @@ import { getEmptyDocument } from '../core/document';
 import { MenuBar, MenuGroup, MenuItem } from '../components/Menu';
 import { RootState } from '../state';
 import { shell } from 'electron';
+import { useTheme } from '../components/theme';
 
 const BottomRightContainer = styled.div`
   position: absolute;
@@ -33,12 +37,110 @@ const BottomRightContainer = styled.div`
   }
 `;
 
+function getDroppedFile(event: React.DragEvent) {
+  const files = event.dataTransfer?.files;
+  if (!files || files.length === 0) return null;
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i] as File & { path?: string };
+    if (!f.path) continue;
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+    if (ext === 'audapolis') return { path: f.path, kind: 'audapolis' };
+    if (SUPPORTED_IMPORT_EXTENSIONS.includes(ext)) {
+      return { path: f.path, kind: 'media' };
+    }
+  }
+  return null;
+}
+
 export function LandingPage(): JSX.Element {
+  const dispatch = useDispatch();
+  const theme = useTheme();
   const connected = useSelector(
     (state: RootState) => state.server.servers[state.server.selectedServer]
   );
+  const [dragActive, setDragActive] = React.useState(false);
+  const dragCounter = React.useRef(0);
 
-  return <AppContainer>{connected ? <LandingContent /> : <ConnectingContent />}</AppContainer>;
+  const onDragEnter = (e: React.DragEvent) => {
+    if (!connected) return;
+    const hasFiles = Array.from(e.dataTransfer?.types || []).includes('Files');
+    if (!hasFiles) return;
+    e.preventDefault();
+    dragCounter.current++;
+    if (!dragActive) setDragActive(true);
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    if (!connected) return;
+    const hasFiles = Array.from(e.dataTransfer?.types || []).includes('Files');
+    if (!hasFiles) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+  const onDragLeave = () => {
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragActive(false);
+    }
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setDragActive(false);
+    if (!connected) return;
+    const dropped = getDroppedFile(e);
+    if (!dropped) {
+      alert(
+        'Drop an .audapolis project, or a supported audio/video file:\n' +
+          SUPPORTED_IMPORT_EXTENSIONS.map((x) => '.' + x).join(', ')
+      );
+      return;
+    }
+    if (dropped.kind === 'audapolis') {
+      dispatch(openDocumentFromDisk(dropped.path));
+    } else {
+      dispatch(transcribeFile(dropped.path));
+    }
+  };
+
+  return (
+    <AppContainer onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+      {connected ? <LandingContent /> : <ConnectingContent />}
+      {dragActive && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: theme.colors.overlayBackgroundColor,
+              opacity: 0.85,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.4em',
+              border: `3px dashed ${theme.colors.border.default}`,
+              color: theme.colors.default,
+            }}
+          >
+            Drop an .audapolis project to open, or media to transcribe
+          </div>
+        </div>
+      )}
+    </AppContainer>
+  );
 }
 
 function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
