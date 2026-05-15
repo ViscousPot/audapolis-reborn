@@ -18,24 +18,32 @@ export class Player {
   renderItems: RenderItem[];
   currentTime: number;
   playing: boolean;
+  lastPlayedSource: string | null = null;
+  playGeneration = 0;
 
   store: Store;
 
   setStore(store: Store): void {
-    const playingHandler = createSelector(
+    const playToggleHandler = createSelector(
       (state: EditorState) => state.playing,
-      (state: EditorState) => state.selection,
-      (state: EditorState) => state.document.content,
-      (playing, selection, content) => {
+      (playing) => {
         this.playing = playing;
         if (playing) {
-          if (selection) {
-            this.currentTime =
-              memoizedTimedDocumentItems(content)[selection.startIndex].absoluteStart;
+          const editorState = store.getState().editor.present as EditorState;
+          if (editorState.selection) {
+            this.currentTime = memoizedTimedDocumentItems(editorState.document.content)[
+              editorState.selection.startIndex
+            ].absoluteStart;
           }
           this.play();
         } else {
           this.pause();
+          if (this.lastPlayedSource) {
+            const editorState = store.getState().editor.present as EditorState;
+            this.remapCursorFromSource(editorState.document.content);
+            const time = this.currentTime;
+            setTimeout(() => this.store.dispatch(setPlayerTime(time)));
+          }
         }
       }
     );
@@ -43,13 +51,25 @@ export class Player {
       (state: EditorState) => selectedItems(state),
       (state: EditorState) => state.document.content,
       (selectedItems, content) => {
+        if (this.playing) {
+          return;
+        }
         this.pause();
         if (selectedItems.length > 0) {
           this.renderItems = renderItems(selectedItems, false);
         } else {
           this.renderItems = memoizedDocumentRenderItems(content, false);
         }
-        if (this.playing) this.play();
+      }
+    );
+    const playbackContentHandler = createSelector(
+      (state: EditorState) => state.document.content,
+      (content) => {
+        if (!this.playing) {
+          return;
+        }
+        this.remapCursorFromSource(content);
+        this.playGeneration++;
       }
     );
     const userSetTimeHandler = createSelector(
@@ -58,6 +78,9 @@ export class Player {
       (state: EditorState) => state.document.content,
       (current, userIndex, content) => {
         if (current != 'user') {
+          return;
+        }
+        if (this.playing) {
           return;
         }
         this.pause();
@@ -80,8 +103,6 @@ export class Player {
             element.currentTime = currentRenderItem.sourceStart + offset;
           }
         }
-
-        if (this.playing) this.play();
       }
     );
 
@@ -89,8 +110,9 @@ export class Player {
       const state: RootState = store.getState();
       const editorState = state.editor.present;
       if (editorState) {
-        playingHandler(editorState);
+        playToggleHandler(editorState);
         renderItemsHandler(editorState);
+        playbackContentHandler(editorState);
         userSetTimeHandler(editorState);
       }
     });
@@ -122,6 +144,25 @@ export class Player {
     }
   }
 
+  remapCursorFromSource(content: EditorState['document']['content']): void {
+    this.renderItems = memoizedDocumentRenderItems(content, false);
+    if (!this.lastPlayedSource) return;
+    const element = this.sources[this.lastPlayedSource];
+    if (!element) return;
+    const sourceTime = element.currentTime;
+    for (const ri of this.renderItems) {
+      if (
+        'source' in ri &&
+        ri.source === this.lastPlayedSource &&
+        sourceTime >= ri.sourceStart &&
+        sourceTime <= ri.sourceStart + ri.length
+      ) {
+        this.currentTime = ri.absoluteStart + (sourceTime - ri.sourceStart);
+        break;
+      }
+    }
+  }
+
   async play(): Promise<void> {
     this.clampCurrentTimeToRenderItemsRange();
 
@@ -129,11 +170,14 @@ export class Player {
     assertSome(currentRenderItem);
 
     if ('source' in currentRenderItem && currentRenderItem.source) {
+      this.lastPlayedSource = currentRenderItem.source;
       const element = this.sources[currentRenderItem.source];
       const offset = this.currentTime - currentRenderItem.absoluteStart;
-      element.currentTime = currentRenderItem.sourceStart + offset;
+      if (element.paused) {
+        element.currentTime = currentRenderItem.sourceStart + offset;
+        await element.play();
+      }
       const startTime = Date.now() / 1000;
-      await element.play();
       this.playRenderItem(
         currentRenderItem,
         () => {
@@ -173,16 +217,23 @@ export class Player {
     onRenderItemDone: () => void,
     onNextRenderItem: () => void
   ): void {
+    const gen = this.playGeneration;
     const startTime = this.currentTime;
     const lastRenderItem = this.renderItems[this.renderItems.length - 1];
     const callback = () => {
+      if (!this.playing) {
+        onRenderItemDone();
+        return;
+      }
+      if (this.playGeneration !== gen) {
+        this.play();
+        return;
+      }
       // we clamp the result of getTime to the end of the currently played Item.
       // this helps to produce the expected end-state if the playing is not stopped in time.
       const time = Math.min(getTime(), renderItem.absoluteStart + renderItem.length);
       this.updateCurrentTime(time);
-      if (!this.playing) {
-        onRenderItemDone();
-      } else if (time >= lastRenderItem.absoluteStart + lastRenderItem.length) {
+      if (time >= lastRenderItem.absoluteStart + lastRenderItem.length) {
         onRenderItemDone();
         setTimeout(() => {
           this.store.dispatch(setPlay(false));
