@@ -52,6 +52,7 @@ const TitleBarContainer = styled.div`
   flex-direction: row;
   justify-content: space-evenly;
   align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 
   -webkit-app-region: drag;
   -webkit-user-select: none;
