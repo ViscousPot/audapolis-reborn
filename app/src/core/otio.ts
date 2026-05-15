@@ -1,4 +1,4 @@
-import { RenderItem, Source } from './document';
+import { RenderItem, Source, getActiveFileContents } from './document';
 import path from 'path';
 import fs from 'fs';
 import { assertSome } from '../util';
@@ -46,7 +46,7 @@ export async function exportOtio(
 
   for (const name of Object.keys(sources)) {
     const source_path = path.join(outputPath, 'media', name);
-    fs.writeFileSync(source_path, new Buffer(sources[name].fileContents));
+    fs.writeFileSync(source_path, new Buffer(getActiveFileContents(sources[name])));
   }
   fs.writeFileSync(path.join(outputPath, `${name}.${extention}`), new Buffer(otioOutput));
 }

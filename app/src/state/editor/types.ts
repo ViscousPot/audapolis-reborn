@@ -32,6 +32,12 @@ export interface Cursor {
   current: 'user' | 'player';
 }
 
+export interface EnhanceProgressState {
+  running: boolean;
+  progress: number;
+  sourceHash?: string;
+}
+
 export interface EditorState {
   path: string | null;
   document: Document;
@@ -46,6 +52,7 @@ export interface EditorState {
 
   exportState: ExportState;
   exportPopup: ExportPopupState;
+  enhanceState: EnhanceProgressState;
 
   filterPopup: boolean;
 
@@ -74,6 +81,7 @@ export const defaultEditorState: EditorState = {
   document: getEmptyDocument(),
   lastSavedDocument: null,
   exportState: { running: false, progress: 0 },
+  enhanceState: { running: false, progress: 0 },
 
   cursor: {
     playerTime: 0,
