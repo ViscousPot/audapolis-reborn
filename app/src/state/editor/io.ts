@@ -63,7 +63,13 @@ export const saveDocument = createAsyncActionWithReducer<
 
 export const closeDocument = createAsyncActionWithReducer<EditorState>(
   'editor/closeDocument',
-  async (arg, { dispatch }) => {
+  async (arg, { dispatch, getState }) => {
+    const state = getState().editor.present;
+    if (state && state.document !== state.lastSavedDocument) {
+      if (confirm('You have unsaved changes. Save before closing?')) {
+        await dispatch(saveDocument(false)).unwrap();
+      }
+    }
     dispatch(setPlay(false));
     dispatch(openLanding());
   }

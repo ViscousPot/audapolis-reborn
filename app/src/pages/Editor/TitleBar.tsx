@@ -21,6 +21,7 @@ import {
   PaneProps,
   Button,
   EraserIcon,
+  MinimizeIcon,
 } from 'evergreen-ui';
 import { ForwardedRef } from 'react';
 import {
@@ -28,7 +29,7 @@ import {
   toggleDisplaySpeakerNames,
   toggleDisplayVideo,
 } from '../../state/editor/display';
-import { saveDocument } from '../../state/editor/io';
+import { closeDocument, saveDocument } from '../../state/editor/io';
 import { removeAllSilences } from '../../state/editor/silence_removal';
 import { setPlay } from '../../state/editor/play';
 import { useTheme } from '../../components/theme';
@@ -152,6 +153,12 @@ export function EditorTitleBar(): JSX.Element {
               />
             </Tooltip>
           )}
+          <Tooltip content={'close document'}>
+            <TitleBarButton
+              icon={MinimizeIcon}
+              onClick={() => dispatch(closeDocument())}
+            />
+          </Tooltip>
         </TitleBarGroup>
       </TitleBarSection>
     </TitleBar>
