@@ -98,6 +98,16 @@ export function Tour({ steps, page, dependencyStates = {} }: TourProps): JSX.Ele
         )}
 
         <Button
+          marginLeft={8}
+          onClick={() => {
+            setStepIndex(steps.length);
+            localStorage.setItem(wasRunStoreKey, 'true');
+          }}
+        >
+          Skip
+        </Button>
+
+        <Button
           tabIndex={0}
           marginLeft={8}
           appearance="primary"
