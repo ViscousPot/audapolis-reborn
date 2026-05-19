@@ -11,6 +11,7 @@ import {
   selectedItems,
   memoizedTimedDocumentItems,
 } from '../state/editor/selectors';
+import { filterLongSilences } from '../state/editor/silence_removal';
 
 export class Player {
   sources: Record<string, HTMLVideoElement> = {};
@@ -50,21 +51,26 @@ export class Player {
     const renderItemsHandler = createSelector(
       (state: EditorState) => selectedItems(state),
       (state: EditorState) => state.document.content,
-      (selectedItems, content) => {
+      (state: EditorState) => state.silenceRemovalActive,
+      (state: EditorState) => state.silenceThreshold,
+      (selectedItems, content, silenceRemovalActive, silenceThreshold) => {
         if (this.playing) {
           return;
         }
         this.pause();
+        const activeContent = silenceRemovalActive ? filterLongSilences(content, silenceThreshold) : content;
         if (selectedItems.length > 0) {
           this.renderItems = renderItems(selectedItems, false);
         } else {
-          this.renderItems = memoizedDocumentRenderItems(content, false);
+          this.renderItems = memoizedDocumentRenderItems(activeContent, false);
         }
       }
     );
     const playbackContentHandler = createSelector(
       (state: EditorState) => state.document.content,
-      (content) => {
+      (state: EditorState) => state.silenceRemovalActive,
+      (state: EditorState) => state.silenceThreshold,
+      (content, _silenceRemovalActive, _silenceThreshold) => {
         if (!this.playing) {
           return;
         }
@@ -145,7 +151,11 @@ export class Player {
   }
 
   remapCursorFromSource(content: EditorState['document']['content']): void {
-    this.renderItems = memoizedDocumentRenderItems(content, false);
+    const state = this.store.getState() as RootState;
+    const silenceRemovalActive = state.editor.present?.silenceRemovalActive ?? false;
+    const silenceThreshold = state.editor.present?.silenceThreshold ?? 0.4;
+    const activeContent = silenceRemovalActive ? filterLongSilences(content, silenceThreshold) : content;
+    this.renderItems = memoizedDocumentRenderItems(activeContent, false);
     if (!this.lastPlayedSource) return;
     const element = this.sources[this.lastPlayedSource];
     if (!element) return;

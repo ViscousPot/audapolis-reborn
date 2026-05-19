@@ -18,6 +18,7 @@ import { setExportPopup, setExportState } from '../../state/editor/display';
 import { ProgressCallback } from '../../core/ffmpeg';
 import { useTheme } from '../../components/theme';
 import { selectedItems, selectionDocument } from '../../state/editor/selectors';
+import { filterLongSilences } from '../../state/editor/silence_removal';
 import _ from 'lodash';
 
 const exportValues: ExportType[] = [
@@ -76,10 +77,15 @@ export function ExportDocumentDialog(): JSX.Element {
       const state: RootState = store.getState();
       dispatch(setExportState({ running: true, progress: 0 }));
       assertSome(state.editor.present);
-      const exportDocument =
+      const silenceRemovalActive = state.editor.present?.silenceRemovalActive ?? false;
+      const silenceThreshold = state.editor.present?.silenceThreshold ?? 0.4;
+      const baseDocument =
         popupState == 'document'
           ? state.editor.present.document
           : selectionDocument(state.editor.present);
+      const exportDocument = silenceRemovalActive
+        ? { ...baseDocument, content: filterLongSilences(baseDocument.content, silenceThreshold) }
+        : baseDocument;
       await exportFnRef
         .current(exportDocument, formState.path, (p) => {
           dispatch(setExportState({ running: true, progress: p }));

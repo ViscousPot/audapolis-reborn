@@ -24,7 +24,6 @@ import * as selectionReducers from './selection';
 import * as transcriptCorrectionReducers from './transcript_correction';
 import * as timingEditorReducers from './timing_editor';
 import { toggleDisplayRetakes, removeRetakes } from './retakes';
-import { removeAllSilences } from './silence_removal';
 import {
   insertWordAfter,
   insertWordInGap,
@@ -34,6 +33,7 @@ import {
   setWordTiming,
   splitWord,
 } from './timing_editor';
+import { toggleSilenceRemoval, setSilenceThreshold } from './silence_removal';
 import { memoizedLintDocumentContent } from '../../util/document_linter';
 
 exposeReducersWindow(displayReducers, editReducers, ioReducers, playReducers, selectionReducers);
@@ -52,7 +52,8 @@ export const reducers: (
   ...Object.values(timingEditorReducers),
   toggleDisplayRetakes,
   removeRetakes,
-  removeAllSilences,
+  toggleSilenceRemoval,
+  setSilenceThreshold,
 ];
 
 function editorReducer(state: EditorState | undefined, action: AnyAction): EditorState {
@@ -93,7 +94,6 @@ const stateSlice: Reducer<StateWithHistory<EditorState | null>> = undoable(edito
     insertWordIntoSilence.type,
     splitWord.type,
     removeWord.type,
-    removeAllSilences.type,
     removeRetakes.type,
   ]),
   ignoreInitialState: false,

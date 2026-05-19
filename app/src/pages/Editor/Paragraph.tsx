@@ -10,7 +10,7 @@ import {
 import { majorScale, Pane, PaneProps, Text } from 'evergreen-ui';
 import { reassignParagraph, renameSpeaker } from '../../state/editor/edit';
 import { memoizedRetakeHighlights } from '../../state/editor/retakes';
-import { VISIBLE_SILENCE_THRESHOLD } from '../../state/editor/silence_removal';
+
 import { RootState } from '../../state';
 import { useTheme } from '../../components/theme';
 import { Selection } from '../../state/editor/types';
@@ -46,6 +46,12 @@ export function Paragraph({
   const displayRetakes = useSelector(
     (state: RootState) => state.editor.present?.displayRetakes || false
   );
+  const silenceRemovalActive = useSelector(
+    (state: RootState) => state.editor.present?.silenceRemovalActive || false
+  );
+  const silenceThreshold = useSelector(
+    (state: RootState) => state.editor.present?.silenceThreshold ?? 0.4
+  );
   const documentContent = useSelector(
     (state: RootState) => state.editor.present?.document.content
   );
@@ -80,6 +86,12 @@ export function Paragraph({
             editingRange.startIndex + editingRange.length > item.absoluteIndex
           ) {
             return; // we are handling the rendering in the first element
+          } else if (
+            silenceRemovalActive &&
+            (item.type === 'non_text' || item.type === 'artificial_silence') &&
+            item.length > silenceThreshold
+          ) {
+            return <span {...commonProps} style={{ display: 'none' }} />;
           } else {
             const preserve = i == 0 || i == data.content.length - 1;
             // Resolve retake highlight for this item. Bridge across silences:
@@ -104,7 +116,8 @@ export function Paragraph({
               displayConfidence,
               commonProps,
               preserve,
-              retakeKind
+              retakeKind,
+              silenceThreshold
             );
           }
         })}
@@ -124,7 +137,8 @@ function renderParagraphItem(
   displayConfidence: boolean,
   commonProps: HTMLProps<HTMLSpanElement>,
   preserve: boolean,
-  retakeKind?: 'discard' | 'keep'
+  retakeKind: 'discard' | 'keep' | undefined,
+  silenceThreshold: number
 ): JSX.Element {
   if (item.type == 'text') {
     let bgColor: string | undefined;
@@ -146,7 +160,7 @@ function renderParagraphItem(
     let bgColor: string | undefined;
     if (retakeKind === 'discard') bgColor = 'rgba(232, 80, 70, 0.42)';
     else if (retakeKind === 'keep') bgColor = 'rgba(70, 195, 110, 0.40)';
-    if (item.length > VISIBLE_SILENCE_THRESHOLD) {
+    if (item.length > silenceThreshold) {
       return (
         <span
           style={{

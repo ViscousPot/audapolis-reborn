@@ -30,8 +30,8 @@ import {
 import { Dispatch } from '@reduxjs/toolkit';
 import { startTranscriptCorrection } from '../../state/editor/transcript_correction';
 import { openTimingEditor } from '../../state/editor/timing_editor';
-import { removeAllSilences } from '../../state/editor/silence_removal';
-import { MenuItem, MenuSeparator, showContextMenu } from '../../components/Menu';
+import { toggleSilenceRemoval } from '../../state/editor/silence_removal';
+import { MenuCheckbox, MenuItem, MenuSeparator, showContextMenu } from '../../components/Menu';
 import { setExportPopup } from '../../state/editor/display';
 
 const DocumentContainer = styled.div<{ displaySpeakerNames: boolean }>`
@@ -135,7 +135,11 @@ export function Document(): JSX.Element {
               callback={() => dispatch(openTimingEditor(firstWordUuid))}
             />
           )}
-          <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
+          <MenuCheckbox
+            label={'Remove long silences'}
+            checked={!!getState().editor.present?.silenceRemovalActive}
+            callback={() => dispatch(toggleSilenceRemoval())}
+          />
           <MenuItem
             label={'Export Selection'}
             callback={() => dispatch(setExportPopup('selection'))}
@@ -183,7 +187,11 @@ export function Document(): JSX.Element {
               callback={() => dispatch(openTimingEditor(wordBeforeCursorUuid))}
             />
           )}
-          <MenuItem label={'Remove long silences'} callback={() => dispatch(removeAllSilences())} />
+          <MenuCheckbox
+            label={'Remove long silences'}
+            checked={!!getState().editor.present?.silenceRemovalActive}
+            callback={() => dispatch(toggleSilenceRemoval())}
+          />
           <MenuItem
             label={'Select All'}
             accelerator={'CmdOrCtrl+A'}

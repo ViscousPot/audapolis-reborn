@@ -12,6 +12,7 @@ import {
   toggleDisplayVideo,
 } from '../../state/editor/display';
 import { toggleDisplayRetakes } from '../../state/editor/retakes';
+import { toggleSilenceRemoval } from '../../state/editor/silence_removal';
 import React from 'react';
 import { MenuBar, MenuCheckbox, MenuGroup, MenuItem, MenuSeparator } from '../../components/Menu';
 
@@ -28,6 +29,9 @@ export function EditorMenuBar(): JSX.Element {
   );
   const displayRetakes = useSelector(
     (state: RootState) => state.editor.present?.displayRetakes || false
+  );
+  const silenceRemovalActive = useSelector(
+    (state: RootState) => state.editor.present?.silenceRemovalActive || false
   );
 
   return (
@@ -130,6 +134,11 @@ export function EditorMenuBar(): JSX.Element {
           label={'Highlight retakes'}
           checked={displayRetakes}
           callback={() => dispatch(toggleDisplayRetakes())}
+        />
+        <MenuCheckbox
+          label={'Remove long silences'}
+          checked={silenceRemovalActive}
+          callback={() => dispatch(toggleSilenceRemoval())}
         />
       </MenuGroup>
     </MenuBar>

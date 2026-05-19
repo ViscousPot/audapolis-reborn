@@ -61,6 +61,9 @@ export interface EditorState {
   timingEditor: TimingEditorState | null;
 
   displayRetakes: boolean;
+
+  silenceRemovalActive: boolean;
+  silenceThreshold: number;
 }
 
 export interface TimingEditorState {
@@ -102,4 +105,7 @@ export const defaultEditorState: EditorState = {
   timingEditor: null,
 
   displayRetakes: true,
+
+  silenceRemovalActive: false,
+  silenceThreshold: 0.4,
 };

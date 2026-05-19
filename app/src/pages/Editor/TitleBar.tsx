@@ -18,6 +18,7 @@ import {
   Pane,
   Paragraph,
   PersonIcon,
+  Popover,
   RedoIcon,
   Tooltip,
   UndoIcon,
@@ -30,7 +31,7 @@ import {
   EraserIcon,
   MinimizeIcon,
 } from 'evergreen-ui';
-import { ForwardedRef, useState } from 'react';
+import { ForwardedRef, useCallback, useRef, useState } from 'react';
 import {
   setExportPopup,
   toggleDisplaySpeakerNames,
@@ -40,7 +41,7 @@ import { enhanceSource, toggleEnhancement } from '../../state/editor/enhance';
 import { toggleDisplayRetakes } from '../../state/editor/retakes';
 import { closeDocument, saveDocument } from '../../state/editor/io';
 import { removeRetakes } from '../../state/editor/retakes';
-import { removeAllSilences } from '../../state/editor/silence_removal';
+import { toggleSilenceRemoval, setSilenceThreshold } from '../../state/editor/silence_removal';
 import { setPlay } from '../../state/editor/play';
 import { useTheme } from '../../components/theme';
 import { Circle } from 'rc-progress';
@@ -94,12 +95,11 @@ function EnhanceDialog({
 }): JSX.Element {
   const dispatch = useDispatch();
   const [useVad, setUseVad] = useState(true);
-  const sources = useSelector(
-    (state: RootState) => state.editor.present?.document.sources
-  ) || {};
-  const enhanceState = useSelector(
-    (state: RootState) => state.editor.present?.enhanceState
-  ) || { running: false, progress: 0 };
+  const sources = useSelector((state: RootState) => state.editor.present?.document.sources) || {};
+  const enhanceState = useSelector((state: RootState) => state.editor.present?.enhanceState) || {
+    running: false,
+    progress: 0,
+  };
   const theme = useTheme();
 
   const sourceEntries = Object.entries(sources);
@@ -185,6 +185,11 @@ export function EditorTitleBar(): JSX.Element {
     false;
   const displayRetakes =
     useSelector((state: RootState) => state.editor.present?.displayRetakes) || false;
+  const silenceRemovalActive =
+    useSelector((state: RootState) => state.editor.present?.silenceRemovalActive) || false;
+  const silenceThreshold =
+    useSelector((state: RootState) => state.editor.present?.silenceThreshold) || 0.4;
+  const theme = useTheme();
   const canUndo = useSelector((state: RootState) => state.editor.past.length > 0);
   const canRedo = useSelector((state: RootState) => state.editor.future.length > 0);
   const canSave = useSelector(
@@ -203,15 +208,22 @@ export function EditorTitleBar(): JSX.Element {
   const enhanceState = useSelector(
     (state: RootState) => state.editor.present?.enhanceState || { running: false, progress: 0 }
   );
-  const sources = useSelector(
-    (state: RootState) => state.editor.present?.document.sources
-  ) || {};
+  const sources = useSelector((state: RootState) => state.editor.present?.document.sources) || {};
   const firstSourceHash = Object.keys(sources)[0] ?? null;
   const isEnhanced = firstSourceHash ? !!sources[firstSourceHash]?.enhancedFileContents : false;
   const enhancedActive = firstSourceHash ? !!sources[firstSourceHash]?.enhancedActive : false;
 
   const exportDisabled = exportState.running || !canExport;
   const [enhanceDialogShown, setEnhanceDialogShown] = useState(false);
+  const [silencePopoverShown, setSilencePopoverShown] = useState(false);
+  const silencePopoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showSilencePopover = useCallback(() => {
+    if (silencePopoverTimer.current) clearTimeout(silencePopoverTimer.current);
+    setSilencePopoverShown(true);
+  }, []);
+  const hideSilencePopover = useCallback(() => {
+    silencePopoverTimer.current = setTimeout(() => setSilencePopoverShown(false), 200);
+  }, []);
   return (
     <TitleBar>
       <TitleBarSection>
@@ -230,17 +242,8 @@ export function EditorTitleBar(): JSX.Element {
               onClick={() => dispatch(ActionCreators.redo())}
             />
           </Tooltip>
-          <Tooltip content={'remove long silences'}>
-            <TitleBarButton
-              icon={EraserIcon}
-              onClick={() => dispatch(removeAllSilences())}
-            />
-          </Tooltip>
           <Tooltip content={'remove retakes'}>
-            <TitleBarButton
-              icon={GraphRemoveIcon}
-              onClick={() => dispatch(removeRetakes())}
-            />
+            <TitleBarButton icon={GraphRemoveIcon} onClick={() => dispatch(removeRetakes())} />
           </Tooltip>
         </TitleBarGroup>
         <TitleBarGroup>
@@ -265,8 +268,52 @@ export function EditorTitleBar(): JSX.Element {
               onClick={() => dispatch(toggleDisplayRetakes())}
             />
           </Tooltip>
+          <Popover
+            isShown={silencePopoverShown}
+            onClose={() => setSilencePopoverShown(false)}
+            content={
+              <Pane
+                padding={majorScale(1)}
+                minWidth={200}
+                backgroundColor={theme.colors.overlayBackgroundColor}
+                onMouseEnter={showSilencePopover}
+                onMouseLeave={hideSilencePopover}
+              >
+                <Text size={300} marginBottom={majorScale(1)} display="block" color={theme.colors.default}>
+                  Silence threshold: {silenceThreshold.toFixed(1)}s
+                </Text>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={4.0}
+                  step={0.1}
+                  value={silenceThreshold}
+                  onChange={(e) => dispatch(setSilenceThreshold(parseFloat(e.target.value)))}
+                  style={{ width: '100%' }}
+                />
+              </Pane>
+            }
+          >
+            {({ getRef }) => (
+              <span
+                ref={getRef}
+                onMouseEnter={showSilencePopover}
+                onMouseLeave={hideSilencePopover}
+              >
+                <TitleBarButton
+                  icon={EraserIcon}
+                  isActive={silenceRemovalActive}
+                  onClick={() => dispatch(toggleSilenceRemoval())}
+                />
+              </span>
+            )}
+          </Popover>
           {enhanceState.running ? (
-            <ProgressButton progress={enhanceState.progress} disabled={true} tooltip="enhancing audio..." />
+            <ProgressButton
+              progress={enhanceState.progress}
+              disabled={true}
+              tooltip="enhancing audio..."
+            />
           ) : isEnhanced ? (
             <Tooltip content={enhancedActive ? 'using enhanced audio' : 'using original audio'}>
               <TitleBarButton
@@ -279,17 +326,11 @@ export function EditorTitleBar(): JSX.Element {
             </Tooltip>
           ) : (
             <Tooltip content={'enhance audio'}>
-              <TitleBarButton
-                icon={CleanIcon}
-                onClick={() => setEnhanceDialogShown(true)}
-              />
+              <TitleBarButton icon={CleanIcon} onClick={() => setEnhanceDialogShown(true)} />
             </Tooltip>
           )}
         </TitleBarGroup>
-        <EnhanceDialog
-          isShown={enhanceDialogShown}
-          onClose={() => setEnhanceDialogShown(false)}
-        />
+        <EnhanceDialog isShown={enhanceDialogShown} onClose={() => setEnhanceDialogShown(false)} />
       </TitleBarSection>
 
       <PlayerControls id={'player-controls' /* for joyride */} />
@@ -316,10 +357,7 @@ export function EditorTitleBar(): JSX.Element {
             </Tooltip>
           )}
           <Tooltip content={'close document'}>
-            <TitleBarButton
-              icon={MinimizeIcon}
-              onClick={() => dispatch(closeDocument())}
-            />
+            <TitleBarButton icon={MinimizeIcon} onClick={() => dispatch(closeDocument())} />
           </Tooltip>
         </TitleBarGroup>
       </TitleBarSection>

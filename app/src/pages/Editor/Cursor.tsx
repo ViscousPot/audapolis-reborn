@@ -10,6 +10,7 @@ import {
   getIndexAtTime,
   memoizedTimedDocumentItems,
 } from '../../state/editor/selectors';
+import { filterLongSilences } from '../../state/editor/silence_removal';
 import _ from 'lodash';
 
 export function Cursor(): JSX.Element {
@@ -94,22 +95,30 @@ function useComputeCursorPosition(parentElement: HTMLElement | null | undefined)
 
   const roundedTime = Math.ceil(time * 10) / 10;
   const showTime = useRoundedTime ? roundedTime : time;
-  const itemIdx = useSelector((state: RootState) => {
-    if (state.editor.present == null) return null;
+  const [itemIdx, item] = useSelector((state: RootState) => {
+    if (state.editor.present == null) return [null, null] as const;
+    const silenceRemovalActive = state.editor.present.silenceRemovalActive;
+    const silenceThreshold = state.editor.present.silenceThreshold ?? 0.4;
+    const content = silenceRemovalActive
+      ? filterLongSilences(state.editor.present.document.content, silenceThreshold)
+      : state.editor.present.document.content;
+    let idx: number | null;
     switch (state.editor.present.cursor.current) {
       case 'player': {
-        return getIndexAtTime(state.editor.present.document.content, showTime);
+        idx = getIndexAtTime(content, showTime);
+        break;
       }
       case 'user':
-        return state.editor.present.cursor.userIndex;
+        idx = state.editor.present.cursor.userIndex;
+        if (idx != null && idx >= content.length) {
+          idx = content.length - 1;
+        }
+        break;
     }
+    const timedContent = memoizedTimedDocumentItems(content);
+    const v = idx != null ? timedContent[idx] ?? null : null;
+    return [idx, v] as const;
   });
-
-  const item = useSelector((state: RootState) =>
-    state.editor.present && itemIdx !== null
-      ? memoizedTimedDocumentItems(state.editor.present.document.content)[itemIdx]
-      : null
-  );
 
   // TODO: Caching?
   if (itemIdx == null) return null;
@@ -125,6 +134,7 @@ function useComputeCursorPosition(parentElement: HTMLElement | null | undefined)
     // "a multiline inline element (such as a multiline <span> element, by default) has a border box around each line."
     // - https://developer.mozilla.org/en-US/docs/Web/API/Element/getClientRects
     const rects = Array.from(itemElement.getClientRects());
+    if (rects.length === 0) return null;
 
     const totalWidth = _.sum(rects.map((r) => r.width));
     const timeInWord = showTime - item.absoluteStart;
