@@ -14,9 +14,11 @@ import {
   moveSelectionHeadRight,
   setSelection,
   selectAll,
+  selectAllBefore,
+  selectAllAfter,
 } from '../../state/editor/selection';
 import { goLeft, goRight, setUserIndex } from '../../state/editor/play';
-import { copy, copySelectionText, deleteSomething, paste } from '../../state/editor/edit';
+import { copy, copySelectionText, deleteInverse, deleteSomething, paste } from '../../state/editor/edit';
 import { Theme } from '../../components/theme';
 import {
   currentIndexLeft,
@@ -151,6 +153,18 @@ export function Document(): JSX.Element {
             label={'Select All'}
             accelerator={'CmdOrCtrl+A'}
             callback={() => dispatch(selectAll())}
+          />
+          <MenuItem
+            label={'Select All Before'}
+            callback={() => dispatch(selectAllBefore())}
+          />
+          <MenuItem
+            label={'Select All After'}
+            callback={() => dispatch(selectAllAfter())}
+          />
+          <MenuItem
+            label={'Delete Inverse'}
+            callback={() => dispatch(deleteInverse())}
           />
           <MenuItem label={'Copy Text'} callback={() => dispatch(copySelectionText())} />
           <MenuItem

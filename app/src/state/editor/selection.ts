@@ -126,6 +126,40 @@ export const selectAll = createActionWithReducer<EditorState>('editor/selectAll'
   }
 });
 
+export const selectAllBefore = createActionWithReducer<EditorState>(
+  'editor/selectAllBefore',
+  (state) => {
+    if (state.document.content.length === 0) return;
+    const endIdx = state.selection
+      ? state.selection.startIndex
+      : currentIndex(state);
+    if (endIdx === 0) return;
+    state.selection = {
+      headPosition: 'left',
+      startIndex: 0,
+      length: endIdx,
+    };
+    setCursorToSelectionHead(state);
+  }
+);
+
+export const selectAllAfter = createActionWithReducer<EditorState>(
+  'editor/selectAllAfter',
+  (state) => {
+    if (state.document.content.length === 0) return;
+    const startIdx = state.selection
+      ? state.selection.startIndex + state.selection.length
+      : currentIndex(state);
+    if (startIdx >= state.document.content.length) return;
+    state.selection = {
+      headPosition: 'right',
+      startIndex: startIdx,
+      length: state.document.content.length - startIdx,
+    };
+    setCursorToSelectionHead(state);
+  }
+);
+
 export const moveSelectionHeadTo = createActionWithReducer<EditorState, number>(
   'editor/moveSelectionHeadTo',
   (state, absoluteIndex) => {

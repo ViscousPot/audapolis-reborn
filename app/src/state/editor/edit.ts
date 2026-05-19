@@ -218,6 +218,40 @@ export const deleteSomething = createActionWithReducer<EditorState, 'left' | 'ri
   }
 );
 
+export const deleteInverse = createActionWithReducer<EditorState>(
+  'editor/deleteInverse',
+  (state) => {
+    const selection = state.selection;
+    if (!selection) return;
+
+    const selectionEnd = Math.min(
+      selection.startIndex + selection.length,
+      state.document.content.length
+    );
+
+    if (selection.startIndex === 0 && selectionEnd === state.document.content.length) {
+      return;
+    }
+
+    const keptSlice = state.document.content.slice(selection.startIndex, selectionEnd);
+
+    const newContent: V3DocumentItem[] = [];
+    if (keptSlice.length === 0 || keptSlice[0].type !== 'paragraph_start') {
+      const speaker = getNotNullSpeakerNameAtIndex(state.document.content, selection.startIndex);
+      newContent.push({ type: 'paragraph_start', speaker, language: null, uuid: uuidv4() });
+    }
+    newContent.push(...keptSlice);
+    if (keptSlice.length === 0 || keptSlice[keptSlice.length - 1].type !== 'paragraph_end') {
+      newContent.push({ type: 'paragraph_end', uuid: uuidv4() });
+    }
+
+    state.document.content = newContent;
+    state.selection = null;
+    state.cursor.current = 'user';
+    state.cursor.userIndex = 0;
+  }
+);
+
 export const copy = createAsyncActionWithReducer<EditorState>(
   'editor/copy',
   async (arg, { getState }) => {
