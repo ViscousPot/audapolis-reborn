@@ -56,6 +56,9 @@ export interface EditorState {
 
   filterPopup: boolean;
 
+  findPopupVisible: boolean;
+  findText: string;
+
   transcriptCorrectionState: string | null;
 
   timingEditor: TimingEditorState | null;
@@ -101,6 +104,9 @@ export const defaultEditorState: EditorState = {
 
   exportPopup: 'hidden',
   filterPopup: false,
+
+  findPopupVisible: false,
+  findText: '',
 
   transcriptCorrectionState: null,
 

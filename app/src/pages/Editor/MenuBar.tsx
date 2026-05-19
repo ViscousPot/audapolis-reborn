@@ -7,6 +7,7 @@ import { copy, cut, paste } from '../../state/editor/edit';
 import { selectAll } from '../../state/editor/selection';
 import {
   setFilterPopup,
+  setFindPopup,
   toggleDisplayConfidence,
   toggleDisplaySpeakerNames,
   toggleDisplayVideo,
@@ -108,6 +109,11 @@ export function EditorMenuBar(): JSX.Element {
 
         <MenuSeparator />
 
+        <MenuItem
+          label={'Find in page'}
+          callback={() => dispatch(setFindPopup(true))}
+          accelerator={'CommandOrControl+F'}
+        />
         <MenuItem
           label={'Filter document'}
           callback={() => dispatch(setFilterPopup(true))}

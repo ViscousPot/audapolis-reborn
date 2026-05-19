@@ -34,7 +34,7 @@ import { startTranscriptCorrection } from '../../state/editor/transcript_correct
 import { openTimingEditor } from '../../state/editor/timing_editor';
 import { toggleSilenceRemoval } from '../../state/editor/silence_removal';
 import { MenuCheckbox, MenuItem, MenuSeparator, showContextMenu } from '../../components/Menu';
-import { setExportPopup } from '../../state/editor/display';
+import { setExportPopup, setFindPopup } from '../../state/editor/display';
 
 const DocumentContainer = styled.div<{ displaySpeakerNames: boolean }>`
   position: relative;
@@ -177,6 +177,12 @@ export function Document(): JSX.Element {
             callback={() => dispatch(paste())}
             accelerator={'CmdOrCtrl+V'}
           />
+          <MenuSeparator />
+          <MenuItem
+            label={'Find in page'}
+            accelerator={'CmdOrCtrl+F'}
+            callback={() => dispatch(setFindPopup(true))}
+          />
         </>
       );
     } else {
@@ -215,6 +221,12 @@ export function Document(): JSX.Element {
             label={'Paste at Cursor Position'}
             callback={() => dispatch(paste())}
             accelerator={'CmdOrCtrl+V'}
+          />
+          <MenuSeparator />
+          <MenuItem
+            label={'Find in page'}
+            accelerator={'CmdOrCtrl+F'}
+            callback={() => dispatch(setFindPopup(true))}
           />
         </>
       );

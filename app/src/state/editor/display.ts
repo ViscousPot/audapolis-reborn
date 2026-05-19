@@ -43,6 +43,23 @@ export const setFilterPopup = createActionWithReducer<EditorState, boolean>(
   }
 );
 
+export const setFindPopup = createActionWithReducer<EditorState, boolean>(
+  'editor/setFindPopup',
+  (state, payload) => {
+    state.findPopupVisible = payload;
+    if (!payload) {
+      state.findText = '';
+    }
+  }
+);
+
+export const setFindText = createActionWithReducer<EditorState, string>(
+  'editor/setFindText',
+  (state, payload) => {
+    state.findText = payload;
+  }
+);
+
 export const setExportState = createActionWithReducer<
   EditorState,
   { running: boolean; progress: number }

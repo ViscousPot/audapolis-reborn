@@ -11,8 +11,10 @@ import { EditorTour } from '../../tour/EditorTour';
 import { togglePlaying } from '../../state/editor/play';
 import { copy, cut, insertParagraphEnd, paste } from '../../state/editor/edit';
 import { saveDocument } from '../../state/editor/io';
+import { setFindPopup } from '../../state/editor/display';
 import { EditorMenuBar } from './MenuBar';
 import { FilterDialog } from './Filter';
+import { FindPopup } from './FindPopup';
 import { TimingEditorDialog } from './TimingEditorDialog';
 
 const MainContainer = styled(MainCenterColumn)`
@@ -46,6 +48,11 @@ export function EditorPage(): JSX.Element {
       dispatch(paste());
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      dispatch(setFindPopup(true));
+      return;
+    }
     if (e.key === ' ') {
       dispatch(togglePlaying());
       e.preventDefault();
@@ -63,6 +70,7 @@ export function EditorPage(): JSX.Element {
       <EditorTitleBar />
       <ExportDocumentDialog />
       <FilterDialog />
+      <FindPopup />
       <TimingEditorDialog />
 
       <MainContainer id={'scroll-container'}>

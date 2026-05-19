@@ -55,6 +55,19 @@ export function Paragraph({
   const documentContent = useSelector(
     (state: RootState) => state.editor.present?.document.content
   );
+  const findText = useSelector(
+    (state: RootState) => state.editor.present?.findText || ''
+  );
+  const findHighlightColor = React.useMemo(() => {
+    const selColor = theme.colors.selectionBackgroundColor;
+    if (!selColor) return 'rgba(56,139,253,0.2)';
+    const m = selColor.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+    if (m) {
+      const a = m[4] ? parseFloat(m[4]) / 2 : 0.2;
+      return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${a})`;
+    }
+    return selColor;
+  }, [theme]);
   const retakeHighlights = React.useMemo(() => {
     if (!displayRetakes || !documentContent) return null;
     return memoizedRetakeHighlights(documentContent);
@@ -117,7 +130,9 @@ export function Paragraph({
               commonProps,
               preserve,
               retakeKind,
-              silenceThreshold
+              silenceThreshold,
+              findText,
+              findHighlightColor
             );
           }
         })}
@@ -138,11 +153,18 @@ function renderParagraphItem(
   commonProps: HTMLProps<HTMLSpanElement>,
   preserve: boolean,
   retakeKind: 'discard' | 'keep' | undefined,
-  silenceThreshold: number
+  silenceThreshold: number,
+  findText: string,
+  findHighlightColor: string
 ): JSX.Element {
   if (item.type == 'text') {
     let bgColor: string | undefined;
-    if (retakeKind === 'discard') bgColor = 'rgba(232, 80, 70, 0.42)';
+    const isFindMatch =
+      findText && item.text.toLowerCase().includes(findText.toLowerCase());
+
+    if (isFindMatch) {
+      bgColor = findHighlightColor;
+    } else if (retakeKind === 'discard') bgColor = 'rgba(232, 80, 70, 0.42)';
     else if (retakeKind === 'keep') bgColor = 'rgba(70, 195, 110, 0.40)';
     else if (displayConfidence) bgColor = `rgba(255, 0, 0, ${1 - item.conf})`;
 

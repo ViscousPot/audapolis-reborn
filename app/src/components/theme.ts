@@ -10,6 +10,7 @@ export interface AudapolisThemeExtension {
     speakers: Record<string, string>;
     playAccent: string;
     overlayBackgroundColor: string;
+    selectionBackgroundColor?: string;
   };
 }
 
