@@ -86,10 +86,6 @@ export class Player {
         if (current != 'user') {
           return;
         }
-        if (this.playing) {
-          return;
-        }
-        this.pause();
 
         const timedDocument = memoizedTimedDocumentItems(content);
         if (userIndex >= timedDocument.length) {
@@ -108,6 +104,13 @@ export class Player {
           if (element) {
             element.currentTime = currentRenderItem.sourceStart + offset;
           }
+        }
+
+        if (this.playing) {
+          this.pause();
+          this.playGeneration++;
+        } else {
+          this.pause();
         }
       }
     );
