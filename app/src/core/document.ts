@@ -84,6 +84,7 @@ interface V3DocumentJson {
 interface V3DocumentMetadata {
   display_video: boolean;
   display_speaker_names: boolean;
+  enhanced_active_sources?: string[];
 }
 
 type V3DocumentItemWithoutUuid =
@@ -152,6 +153,21 @@ export type V3TimedMacroItem = V3MacroItem &
 export interface Source {
   fileContents: ArrayBuffer;
   objectUrl: string;
+  enhancedFileContents?: ArrayBuffer;
+  enhancedObjectUrl?: string;
+  enhancedActive?: boolean;
+}
+
+export function getActiveFileContents(source: Source): ArrayBuffer {
+  return source.enhancedActive && source.enhancedFileContents
+    ? source.enhancedFileContents
+    : source.fileContents;
+}
+
+export function getActiveObjectUrl(source: Source): string {
+  return source.enhancedActive && source.enhancedObjectUrl
+    ? source.enhancedObjectUrl
+    : source.objectUrl;
 }
 export interface Document<S = Source, I = V3DocumentItem, M = V3DocumentMetadata> {
   sources: Record<string, S>;
@@ -226,13 +242,24 @@ export async function deserializeDocument(
 
   // TODO: Only load needed?
   const loadSources = async (): Promise<Record<string, Source>> => {
-    const sourceFiles = zip.file(/^sources\//);
-    const sources = Object.fromEntries(
+    const sourceFiles = zip.file(/^sources\/[^.]+$/);
+    const sources: Record<string, Source> = Object.fromEntries(
       await Promise.all(
         sourceFiles.map(async (file) => {
           const fileContents = await file.async('arraybuffer');
           const objectUrl = URL.createObjectURL(new Blob([fileContents]));
-          return [basename(file.name), { fileContents, objectUrl }];
+          const sourceName = basename(file.name);
+          const entry: Source = { fileContents, objectUrl };
+          const enhancedFile = zip.file(`${file.name}.enhanced`);
+          if (enhancedFile) {
+            entry.enhancedFileContents = await enhancedFile.async('arraybuffer');
+            entry.enhancedObjectUrl = URL.createObjectURL(
+              new Blob([entry.enhancedFileContents])
+            );
+            const activeSources = partialDocument.metadata.enhanced_active_sources;
+            entry.enhancedActive = activeSources?.includes(sourceName) ?? false;
+          }
+          return [sourceName, entry];
         })
       )
     );
@@ -357,12 +384,22 @@ export function serializeDocument(document: Document): JSZip {
     .filter(([hash, _]) => neededSources.has(hash))
     .map(([k, source]) => {
       zip.file(`sources/${k}`, source.fileContents);
+      if (source.enhancedFileContents) {
+        zip.file(`sources/${k}.enhanced`, source.enhancedFileContents);
+      }
     });
+
+  const enhancedActiveSources = Object.entries(document.sources)
+    .filter(([, s]) => s.enhancedActive && s.enhancedFileContents)
+    .map(([k]) => k);
 
   const encodedDocument: V3DocumentJson = {
     version: 3,
     content: document.content,
-    metadata: document.metadata,
+    metadata: {
+      ...document.metadata,
+      ...(enhancedActiveSources.length > 0 ? { enhanced_active_sources: enhancedActiveSources } : {}),
+    },
   };
   zip.file('document.json', JSON.stringify(encodedDocument));
   return zip;

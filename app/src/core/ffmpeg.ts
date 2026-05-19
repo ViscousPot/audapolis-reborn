@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Source, RenderItem } from './document';
+import { Source, RenderItem, getActiveFileContents } from './document';
 import Fessonia from '@tedconf/fessonia';
 import ffmpegPath from 'ffmpeg-static';
 import AppDirectory from 'appdirectory';
@@ -136,7 +136,7 @@ export async function exportVideo(
     if ('source' in part) {
       const source = sources[part.source];
       const source_path = path.join(tempdir, `part${i}-source`);
-      fs.writeFileSync(source_path, new Buffer(source.fileContents));
+      fs.writeFileSync(source_path, new Buffer(getActiveFileContents(source)));
       const input = new FFmpegInput(source_path, {
         ss: part.sourceStart.toString(),
         t: part.length.toString(),
@@ -213,7 +213,7 @@ export async function exportAudio(
     if ('source' in part) {
       const source = sources[part.source];
       const source_path = path.join(tempdir, `part${i}-source`);
-      fs.writeFileSync(source_path, new Buffer(source.fileContents));
+      fs.writeFileSync(source_path, new Buffer(getActiveFileContents(source)));
       return new FFmpegInput(source_path, {
         ss: part.sourceStart.toString(),
         t: part.length.toString(),

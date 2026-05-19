@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../state';
 import styled from 'styled-components';
 import { player } from '../../core/player';
+import { getActiveObjectUrl } from '../../core/document';
 import { Card, FilmIcon, Pane } from 'evergreen-ui';
 import { CrossedOutIcon } from '../../components/Util';
 import { currentIndex } from '../../state/editor/selectors';
@@ -72,7 +73,7 @@ export function Player(): JSX.Element {
           <VideoTag
             visible={currentSource === k}
             key={k}
-            src={source.objectUrl}
+            src={getActiveObjectUrl(source)}
             ref={(ref) => {
               if (ref) {
                 player.sources[k] = ref;

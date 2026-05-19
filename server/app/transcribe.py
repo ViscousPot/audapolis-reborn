@@ -16,7 +16,6 @@ from vosk import KaldiRecognizer, Model
 
 from .models import models
 from .tasks import Task, tasks
-from .whisper_backend import DiarizationFailed, WhisperWrapper, transcribe_with_whisper
 
 SAMPLE_RATE = 16000
 # Number of seconds that should be fed into vosk.
@@ -137,6 +136,8 @@ def transcribe(
     # TODO: can we make this atomic?
     task.total = audio.duration_seconds
     task.processed = 0
+
+    from .whisper_backend import DiarizationFailed, WhisperWrapper, transcribe_with_whisper
 
     if isinstance(model, WhisperWrapper):
         task.state = TranscriptionState.TRANSCRIBING

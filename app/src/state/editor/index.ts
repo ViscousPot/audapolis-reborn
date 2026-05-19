@@ -17,12 +17,13 @@ import { finishTranscriptCorrection } from './transcript_correction';
 
 import * as displayReducers from './display';
 import * as editReducers from './edit';
+import * as enhanceReducers from './enhance';
 import * as ioReducers from './io';
 import * as playReducers from './play';
 import * as selectionReducers from './selection';
 import * as transcriptCorrectionReducers from './transcript_correction';
 import * as timingEditorReducers from './timing_editor';
-import { toggleDisplayRetakes } from './retakes';
+import { toggleDisplayRetakes, removeRetakes } from './retakes';
 import { removeAllSilences } from './silence_removal';
 import {
   insertWordAfter,
@@ -43,12 +44,14 @@ export const reducers: (
 )[] = [
   ...Object.values(displayReducers),
   ...Object.values(editReducers),
+  ...Object.values(enhanceReducers),
   ...Object.values(ioReducers),
   ...Object.values(playReducers),
   ...Object.values(selectionReducers),
   ...Object.values(transcriptCorrectionReducers),
   ...Object.values(timingEditorReducers),
   toggleDisplayRetakes,
+  removeRetakes,
   removeAllSilences,
 ];
 
@@ -91,6 +94,7 @@ const stateSlice: Reducer<StateWithHistory<EditorState | null>> = undoable(edito
     splitWord.type,
     removeWord.type,
     removeAllSilences.type,
+    removeRetakes.type,
   ]),
   ignoreInitialState: false,
   syncFilter: true,

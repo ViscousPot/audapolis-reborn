@@ -105,6 +105,36 @@ export function deleteHfToken(server: ServerConfig): Promise<AppConfig> {
   return fetchFromServer(server, 'DELETE', 'config/hf-token').then((x) => x.json());
 }
 
+export enum EnhanceState {
+  QUEUED = 'queued',
+  LOADING_MODEL = 'loading_model',
+  PROCESSING = 'processing',
+  DONE = 'done',
+  FAILED = 'failed',
+}
+
+export interface EnhanceTask extends Task {
+  state: EnhanceState;
+  progress: number;
+  error?: string;
+}
+
+export function startEnhancement(
+  server: ServerConfig,
+  file: File,
+  useVad: boolean
+): Promise<EnhanceTask> {
+  return fetchFromServer(server, 'POST', 'tasks/start_enhancement', { use_vad: useVad }, {
+    form: { file },
+  }).then((x) => x.json());
+}
+
+export function getEnhancedAudio(server: ServerConfig, taskUuid: string): Promise<ArrayBuffer> {
+  return fetchFromServer(server, 'GET', `tasks/${taskUuid}/enhanced-audio`).then((x) =>
+    x.arrayBuffer()
+  );
+}
+
 export function getAvailableModels(server: ServerConfig): Promise<Record<string, Language>> {
   return fetchFromServer(server, 'GET', 'models/available').then((x) => x.json());
 }

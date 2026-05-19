@@ -28,6 +28,7 @@ from .models import (
 from .config import get_hf_token, HF_TOKEN_PATH
 from .otio import Segment, convert_otio
 from .tasks import TaskNotFoundError, tasks
+from .enhance import EnhanceState, EnhanceTask, process_enhancement
 from .transcribe import TranscriptionState, TranscriptionTask, process_audio
 
 app = FastAPI()
@@ -82,6 +83,31 @@ async def start_transcription(
         diarize_max_speakers,
     )
     return task
+
+
+@app.post("/tasks/start_enhancement/")
+async def start_enhancement(
+    background_tasks: BackgroundTasks,
+    use_vad: bool = False,
+    file: UploadFile = File(...),
+    auth: str = Depends(token_auth),
+):
+    file_bytes = await file.read()
+    task = tasks.add(EnhanceTask())
+    background_tasks.add_task(process_enhancement, file_bytes, use_vad, task.uuid)
+    return task
+
+
+@app.get("/tasks/{task_uuid}/enhanced-audio/")
+async def get_enhanced_audio(task_uuid: str, auth: str = Depends(token_auth)):
+    from fastapi.responses import Response
+
+    task = tasks.get(task_uuid)
+    if not isinstance(task, EnhanceTask):
+        raise HTTPException(status_code=400, detail="Not an enhancement task")
+    if task.state != EnhanceState.DONE or task.enhanced_audio is None:
+        raise HTTPException(status_code=400, detail="Enhancement not complete")
+    return Response(content=task.enhanced_audio, media_type="audio/wav")
 
 
 @app.post("/tasks/download_model/")

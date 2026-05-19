@@ -98,3 +98,24 @@ export const toggleDisplayRetakes = createActionWithReducer<EditorState>(
     state.displayRetakes = !state.displayRetakes;
   }
 );
+
+export const removeRetakes = createActionWithReducer<EditorState>(
+  'retakes/removeRetakes',
+  (state) => {
+    const highlights = computeRetakeHighlights(state.document.content);
+    const discardUuids = new Set(
+      Object.entries(highlights)
+        .filter(([, kind]) => kind === 'discard')
+        .map(([uuid]) => uuid)
+    );
+    if (discardUuids.size === 0) return;
+
+    state.document.content = state.document.content.filter((item) => {
+      if (item.type !== 'text') return true;
+      return !discardUuids.has(item.uuid);
+    });
+    state.selection = null;
+    state.cursor.current = 'user';
+    state.cursor.userIndex = Math.min(state.cursor.userIndex, state.document.content.length);
+  }
+);
