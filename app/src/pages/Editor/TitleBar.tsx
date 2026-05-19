@@ -25,6 +25,7 @@ import {
   Text,
   PlayIcon,
   PauseIcon,
+  VolumeUpIcon,
   majorScale,
   PaneProps,
   Button,
@@ -43,6 +44,7 @@ import { closeDocument, saveDocument } from '../../state/editor/io';
 import { removeRetakes } from '../../state/editor/retakes';
 import { toggleSilenceRemoval, setSilenceThreshold } from '../../state/editor/silence_removal';
 import { setPlay } from '../../state/editor/play';
+import { setVolume } from '../../state/editor/volume';
 import { useTheme } from '../../components/theme';
 import { Circle } from 'rc-progress';
 import { currentCursorTime, memoizedParagraphItems } from '../../state/editor/selectors';
@@ -296,7 +298,7 @@ export function EditorTitleBar(): JSX.Element {
           >
             {({ getRef }) => (
               <span
-                ref={getRef}
+                ref={getRef as unknown as React.Ref<HTMLSpanElement>}
                 onMouseEnter={showSilencePopover}
                 onMouseLeave={hideSilencePopover}
               >
@@ -381,16 +383,38 @@ function PlayerControls(props: PaneProps) {
     return (str.length == 1 ? '0' + str : str).substr(0, 2);
   };
   const playing = useSelector((state: RootState) => state.editor.present?.playing);
+  const volume = useSelector((state: RootState) => state.editor.present?.volume ?? 1);
   const dispatch = useDispatch();
 
   const theme = useTheme();
+
+  const [volumePopoverShown, setVolumePopoverShown] = useState(false);
+  const volumePopoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showVolumePopover = useCallback(() => {
+    if (volumePopoverTimer.current) clearTimeout(volumePopoverTimer.current);
+    setVolumePopoverShown(true);
+  }, []);
+  const hideVolumePopover = useCallback(() => {
+    volumePopoverTimer.current = setTimeout(() => setVolumePopoverShown(false), 200);
+  }, []);
+
+  const handleVolumeWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      dispatch(setVolume(volume + delta));
+      showVolumePopover();
+    },
+    [volume, dispatch, showVolumePopover]
+  );
 
   return (
     <Pane
       borderRadius={8}
       border={'default'}
       height={30}
-      width={200}
+      width={230}
       display={'flex'}
       flexDirection={'row'}
       alignItems={'center'}
@@ -398,7 +422,7 @@ function PlayerControls(props: PaneProps) {
       style={{ WebkitAppRegion: 'no-drag' }}
       {...props}
     >
-      <Text marginRight={majorScale(2)} style={{ fontVariantNumeric: 'tabular-nums' }} size={500}>
+      <Text marginRight={majorScale(1)} style={{ fontVariantNumeric: 'tabular-nums' }} size={500}>
         {formatInt(time / 60)}:{formatInt(time % 60)}:{formatInt((time * 100) % 100)}
       </Text>
       <PlayIcon
@@ -411,6 +435,44 @@ function PlayerControls(props: PaneProps) {
         onClick={() => dispatch(setPlay(false))}
         size={19}
       />
+      <Popover
+        isShown={volumePopoverShown}
+        onClose={() => setVolumePopoverShown(false)}
+        content={
+          <Pane
+            padding={majorScale(1)}
+            minWidth={160}
+            backgroundColor={theme.colors.overlayBackgroundColor}
+            onMouseEnter={showVolumePopover}
+            onMouseLeave={hideVolumePopover}
+          >
+            <Text size={300} marginBottom={majorScale(1)} display="block" color={theme.colors.default}>
+              Volume: {Math.round(volume * 100)}%
+            </Text>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => dispatch(setVolume(parseFloat(e.target.value)))}
+              style={{ width: '100%' }}
+            />
+          </Pane>
+        }
+      >
+        {({ getRef }) => (
+          <span
+            ref={getRef as unknown as React.Ref<HTMLSpanElement>}
+            onMouseEnter={showVolumePopover}
+            onMouseLeave={hideVolumePopover}
+            onWheel={handleVolumeWheel}
+            style={{ display: 'flex', cursor: 'ns-resize', marginLeft: majorScale(1) }}
+          >
+            <VolumeUpIcon color="default" size={19} />
+          </span>
+        )}
+      </Popover>
     </Pane>
   );
 }

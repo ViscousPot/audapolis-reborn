@@ -64,6 +64,8 @@ export interface EditorState {
 
   silenceRemovalActive: boolean;
   silenceThreshold: number;
+
+  volume: number;
 }
 
 export interface TimingEditorState {
@@ -108,4 +110,6 @@ export const defaultEditorState: EditorState = {
 
   silenceRemovalActive: false,
   silenceThreshold: 0.4,
+
+  volume: 1,
 };

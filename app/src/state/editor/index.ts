@@ -34,6 +34,7 @@ import {
   splitWord,
 } from './timing_editor';
 import { toggleSilenceRemoval, setSilenceThreshold } from './silence_removal';
+import { setVolume } from './volume';
 import { memoizedLintDocumentContent } from '../../util/document_linter';
 
 exposeReducersWindow(displayReducers, editReducers, ioReducers, playReducers, selectionReducers);
@@ -54,6 +55,7 @@ export const reducers: (
   removeRetakes,
   toggleSilenceRemoval,
   setSilenceThreshold,
+  setVolume,
 ];
 
 function editorReducer(state: EditorState | undefined, action: AnyAction): EditorState {

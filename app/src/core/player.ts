@@ -112,6 +112,15 @@ export class Player {
       }
     );
 
+    const volumeHandler = createSelector(
+      (state: EditorState) => state.volume,
+      (volume) => {
+        Object.values(this.sources).forEach((el) => {
+          el.volume = volume;
+        });
+      }
+    );
+
     store.subscribe(() => {
       const state: RootState = store.getState();
       const editorState = state.editor.present;
@@ -120,6 +129,7 @@ export class Player {
         renderItemsHandler(editorState);
         playbackContentHandler(editorState);
         userSetTimeHandler(editorState);
+        volumeHandler(editorState);
       }
     });
     this.store = store;
